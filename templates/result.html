@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="View the AI analysis report, cause, severity, and treatments for crop diseases on CropSense.AI.">
+    <title>Analysis Report - CropSense.AI</title>
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- JavaScript -->
+    <script defer src="{{ url_for('static', filename='script.js') }}"></script>
+</head>
+<body>
+
+    <!-- Header & Navbar -->
+    <header class="navbar">
+        <div class="container navbar-container">
+            <a href="/" class="navbar-brand" id="nav-brand-logo">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 3.58 1 9.2a7.07 7.07 0 0 1-7.6 8.8Z" />
+                    <path d="M19 2c-2.26 4.33-5.27 7.14-8 10" />
+                </svg>
+                <span>CropSense.AI</span>
+            </a>
+            
+            <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
+            <nav>
+                <ul class="nav-menu" id="nav-menu">
+                    <li><a href="/" class="nav-link" id="nav-home">Home</a></li>
+                    <li><a href="/analyze" class="nav-link active" id="nav-analyze">Analyze</a></li>
+                    <li><a href="/dashboard" class="nav-link" id="nav-dashboard">Dashboard</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="result-wrapper">
+        <div class="container">
+            <div class="result-card">
+                <h1>Disease Analysis Report</h1>
+                
+                <div class="result-grid">
+                    <!-- Left: Uploaded leaf image preview -->
+                    <div class="result-image-container">
+                        <img src="" alt="Analyzed crop leaf preview" class="result-image" id="report-image">
+                    </div>
+
+                    <!-- Right: Analysis parameters -->
+                    <div class="result-details">
+                        <!-- Crop Name -->
+                        <div class="result-info-group">
+                            <span class="result-info-label">Crop Name</span>
+                            <span class="result-crop-name" id="report-crop-name">Loading...</span>
+                        </div>
+
+                        <!-- Disease Name -->
+                        <div class="result-info-group">
+                            <span class="result-info-label">Disease Diagnosis</span>
+                            <span class="result-disease-name" id="report-disease-name">Loading...</span>
+                        </div>
+
+                        <!-- Severity Badge -->
+                        <div class="result-info-group">
+                            <span class="result-info-label">Severity Level</span>
+                            <div style="margin-top: 4px;">
+                                <span class="badge" id="report-severity-badge">Checking...</span>
+                            </div>
+                        </div>
+
+                        <!-- Cause of the disease -->
+                        <div class="result-info-group">
+                            <span class="result-info-label">Cause of Disease</span>
+                            <p class="result-info-value" id="report-cause">Loading...</p>
+                        </div>
+
+                        <!-- Treatment Recommendation -->
+                        <div class="result-info-group">
+                            <span class="result-info-label">Recommended Treatment</span>
+                            <div class="treatment-box">
+                                <p id="report-treatment">Loading...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons below card -->
+                <div class="actions-row">
+                    <a href="/analyze" class="btn-secondary" id="btn-analyze-another">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                        <span>Analyze Another</span>
+                    </a>
+                    
+                    <button class="btn btn-primary" id="btn-save" onclick="saveScanToDashboard()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                        <span>Save to Dashboard</span>
+                    </button>
+                </div>
+
+                <!-- Alert Message -->
+                <div class="alert-message" id="alert-message">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                    <span id="alert-text">Saved successfully!</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-container">
+            <a href="/" class="footer-logo" id="footer-logo">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 3.58 1 9.2a7.07 7.07 0 0 1-7.6 8.8Z" />
+                    <path d="M19 2c-2.26 4.33-5.27 7.14-8 10" />
+                </svg>
+                <span>CropSense.AI</span>
+            </a>
+            <div class="footer-text" id="footer-text-copyright">
+                CropSense.AI &copy; 2025 | Powered by Gemini AI
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript dynamic rendering and saving logic -->
+    <script>
+        let scanData = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load and parse scan results from localStorage
+            const localData = localStorage.getItem('scanResult');
+            
+            if (!localData) {
+                alert('No scan report data was found. Redirecting you to the analysis page.');
+                window.location.href = '/analyze';
+                return;
+            }
+
+            try {
+                scanData = JSON.parse(localData);
+                renderScanDetails(scanData);
+            } catch (e) {
+                console.error('Failed to parse scan data:', e);
+                alert('Invalid scan report data stored. Redirecting you to the analysis page.');
+                window.location.href = '/analyze';
+            }
+        });
+
+        // Dynamic rendering logic
+        function renderScanDetails(data) {
+            // Set image preview
+            const reportImage = document.getElementById('report-image');
+            if (data.image_url) {
+                reportImage.src = data.image_url;
+            } else {
+                reportImage.src = 'https://placehold.co/400?text=No+Leaf+Image';
+            }
+
+            // Set text values
+            document.getElementById('report-crop-name').textContent = data.crop_name || 'N/A';
+            document.getElementById('report-disease-name').textContent = data.disease_name || 'Healthy';
+            document.getElementById('report-cause').textContent = data.cause || 'No disease patterns detected.';
+            document.getElementById('report-treatment').textContent = data.treatment || 'No treatment required.';
+
+            // Render severity badge
+            const badge = document.getElementById('report-severity-badge');
+            const severity = (data.severity || 'N/A').toLowerCase().trim();
+
+            badge.className = 'badge'; // Reset classes
+            if (severity === 'mild') {
+                badge.classList.add('badge-mild');
+                badge.textContent = 'Mild';
+            } else if (severity === 'moderate') {
+                badge.classList.add('badge-moderate');
+                badge.textContent = 'Moderate';
+            } else if (severity === 'severe') {
+                badge.classList.add('badge-severe');
+                badge.textContent = 'Severe';
+            } else {
+                badge.classList.add('badge-na');
+                badge.textContent = data.severity || 'Healthy / N/A';
+            }
+        }
+
+        // Save scan to database dashboard
+        async function saveScanToDashboard() {
+            if (!scanData) {
+                alert('No scan data available to save.');
+                return;
+            }
+
+            const btnSave = document.getElementById('btn-save');
+            const alertMsg = document.getElementById('alert-message');
+            const alertText = document.getElementById('alert-text');
+
+            // Disable button during requests to avoid double saves
+            btnSave.disabled = true;
+            btnSave.classList.add('btn-disabled');
+
+            try {
+                const response = await fetch('/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(scanData)
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Server failed to save record.');
+                }
+
+                // Show success UI
+                alertMsg.style.backgroundColor = 'rgba(46, 125, 50, 0.12)';
+                alertMsg.style.borderColor = 'rgba(46, 125, 50, 0.25)';
+                alertMsg.style.color = '#1b5e20';
+                alertText.textContent = 'Saved successfully!';
+                
+                // Show success icon
+                alertMsg.querySelector('svg').innerHTML = `
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                `;
+                alertMsg.classList.add('show');
+                
+                // Keep button disabled and change text
+                btnSave.querySelector('span').textContent = 'Saved to Dashboard';
+            } catch (error) {
+                console.error('Failed to save scan:', error);
+                
+                // Re-enable button on error
+                btnSave.disabled = false;
+                btnSave.classList.remove('btn-disabled');
+                
+                // Show error message in alert box
+                alertMsg.style.backgroundColor = 'rgba(211, 47, 47, 0.12)';
+                alertMsg.style.borderColor = 'rgba(211, 47, 47, 0.25)';
+                alertMsg.style.color = '#c62828';
+                alertText.textContent = `Save failed: ${error.message}`;
+                
+                // Alert warning icon
+                alertMsg.querySelector('svg').innerHTML = `
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                `;
+                alertMsg.classList.add('show');
+            }
+        }
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="View your historical crop disease scans and analysis trends on the CropSense.AI history dashboard.">
+    <title>History Dashboard - CropSense.AI</title>
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- JavaScript -->
+    <script defer src="{{ url_for('static', filename='script.js') }}"></script>
+</head>
+<body>
+
+    <!-- Header & Navbar -->
+    <header class="navbar">
+        <div class="container navbar-container">
+            <a href="/" class="navbar-brand" id="nav-brand-logo">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 3.58 1 9.2a7.07 7.07 0 0 1-7.6 8.8Z" />
+                    <path d="M19 2c-2.26 4.33-5.27 7.14-8 10" />
+                </svg>
+                <span>CropSense.AI</span>
+            </a>
+            
+            <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
+            <nav>
+                <ul class="nav-menu" id="nav-menu">
+                    <li><a href="/" class="nav-link" id="nav-home">Home</a></li>
+                    <li><a href="/analyze" class="nav-link" id="nav-analyze">Analyze</a></li>
+                    <li><a href="/dashboard" class="nav-link active" id="nav-dashboard">Dashboard</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="dashboard-wrapper">
+        <div class="container">
+            <!-- Error Banner -->
+            <div class="dashboard-error" id="dashboard-error">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <span id="error-message-text">Supabase connection error. Please configure database credentials in .env.</span>
+            </div>
+
+            <!-- Dashboard Header -->
+            <div class="dashboard-header">
+                <div class="dashboard-title">
+                    <h1>Your Scan History</h1>
+                    <p>All your previous crop disease analyses and health reports</p>
+                </div>
+                <a href="/analyze" class="btn btn-primary" id="btn-new-analysis">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>New Analysis</span>
+                </a>
+            </div>
+
+            <!-- Stats Cards Row -->
+            <div class="stats-grid">
+                <!-- Stat 1: Total Scans -->
+                <div class="stat-card" id="stat-total-scans">
+                    <div class="stat-icon">
+                        <svg viewBox="0 0 24 24">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="9" y1="9" x2="15" y2="9"></line>
+                            <line x1="9" y1="13" x2="15" y2="13"></line>
+                            <line x1="9" y1="17" x2="13" y2="17"></line>
+                        </svg>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Total Scans</span>
+                        <span class="stat-value" id="val-total-scans">-</span>
+                    </div>
+                </div>
+
+                <!-- Stat 2: Most Common Disease -->
+                <div class="stat-card" id="stat-common-disease">
+                    <div class="stat-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            <path d="M12 8v4" />
+                            <path d="M12 16h.01" />
+                        </svg>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Common Disease</span>
+                        <span class="stat-value" id="val-common-disease">-</span>
+                    </div>
+                </div>
+
+                <!-- Stat 3: Last Scan Date -->
+                <div class="stat-card" id="stat-last-scan">
+                    <div class="stat-icon">
+                        <svg viewBox="0 0 24 24">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Last Scan Date</span>
+                        <span class="stat-value" id="val-last-scan">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Table Section -->
+            <div class="table-container" id="table-container" style="display: none;">
+                <table class="history-table" id="history-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Crop Name</th>
+                            <th>Disease Name</th>
+                            <th>Severity</th>
+                            <th>Treatment</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-tbody">
+                        <!-- Loaded dynamically -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty State Section -->
+            <div class="empty-state" id="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                </svg>
+                <h3>No scans yet</h3>
+                <p>Start by analyzing a crop to diagnose leaf diseases instantly with AI.</p>
+                <a href="/analyze" class="btn btn-primary" id="btn-empty-analyze">Analyze Now</a>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-container">
+            <a href="/" class="footer-logo" id="footer-logo">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 3.58 1 9.2a7.07 7.07 0 0 1-7.6 8.8Z" />
+                    <path d="M19 2c-2.26 4.33-5.27 7.14-8 10" />
+                </svg>
+                <span>CropSense.AI</span>
+            </a>
+            <div class="footer-text" id="footer-text-copyright">
+                CropSense.AI &copy; 2025 | Powered by Gemini AI
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript Data Loading Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchHistoryData();
+        });
+
+        // Fetch scan history from the backend GET /history endpoint
+        async function fetchHistoryData() {
+            const tableContainer = document.getElementById('table-container');
+            const emptyState = document.getElementById('empty-state');
+            const errorBanner = document.getElementById('dashboard-error');
+            const errorText = document.getElementById('error-message-text');
+
+            try {
+                const response = await fetch('/history');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Server failed to retrieve scan history.');
+                }
+
+                // If success, hide error banner
+                errorBanner.style.display = 'none';
+
+                if (!data || data.length === 0) {
+                    // Populate empty metrics
+                    populateMetrics(0, 'None', 'None');
+                    
+                    // Toggle visibility
+                    tableContainer.style.display = 'none';
+                    emptyState.style.display = 'flex';
+                } else {
+                    // Process metrics
+                    calculateAndPopulateMetrics(data);
+                    
+                    // Render rows in table
+                    renderHistoryTable(data);
+                    
+                    // Toggle visibility
+                    emptyState.style.display = 'none';
+                    tableContainer.style.display = 'block';
+                }
+
+            } catch (error) {
+                console.error('History fetch error:', error);
+                
+                // Show error banner
+                errorText.textContent = `Database configuration error: ${error.message}`;
+                errorBanner.style.display = 'flex';
+
+                // Revert to empty defaults
+                populateMetrics(0, 'Error', 'Error');
+                tableContainer.style.display = 'none';
+                emptyState.style.display = 'flex';
+            }
+        }
+
+        // Calculate metrics dynamically
+        function calculateAndPopulateMetrics(data) {
+            const totalScans = data.length;
+
+            // Find most common disease (skipping "healthy" if others exist, otherwise top occurrence)
+            const counts = {};
+            let maxDisease = 'None';
+            let maxCount = 0;
+
+            data.forEach(item => {
+                const name = item.disease_name || 'Healthy';
+                counts[name] = (counts[name] || 0) + 1;
+            });
+
+            for (const name in counts) {
+                if (counts[name] > maxCount) {
+                    maxCount = counts[name];
+                    maxDisease = name;
+                }
+            }
+
+            // Get last scan date (first element because sorted desc)
+            let lastScanDate = 'None';
+            if (data[0] && data[0].created_at) {
+                lastScanDate = formatDateString(data[0].created_at);
+            }
+
+            populateMetrics(totalScans, maxDisease, lastScanDate);
+        }
+
+        // Apply metrics to visual fields
+        function populateMetrics(total, common, last) {
+            document.getElementById('val-total-scans').textContent = total;
+            document.getElementById('val-common-disease').textContent = common;
+            document.getElementById('val-last-scan').textContent = last;
+        }
+
+        // Render rows in dashboard table
+        function renderHistoryTable(scans) {
+            const tbody = document.getElementById('history-tbody');
+            tbody.innerHTML = ''; // Reset body content
+
+            scans.forEach(scan => {
+                const row = document.createElement('tr');
+
+                // Date cell
+                const dateCell = document.createElement('td');
+                dateCell.textContent = formatDateString(scan.created_at);
+                row.appendChild(dateCell);
+
+                // Crop name cell
+                const cropCell = document.createElement('td');
+                cropCell.className = 'crop-cell';
+                cropCell.textContent = scan.crop_name || 'N/A';
+                row.appendChild(cropCell);
+
+                // Disease name cell
+                const diseaseCell = document.createElement('td');
+                diseaseCell.className = 'disease-cell';
+                diseaseCell.textContent = scan.disease_name || 'Healthy';
+                row.appendChild(diseaseCell);
+
+                // Severity badge cell
+                const severityCell = document.createElement('td');
+                const badge = document.createElement('span');
+                badge.className = 'badge';
+                
+                const severity = (scan.severity || 'N/A').toLowerCase().trim();
+                if (severity === 'mild') {
+                    badge.classList.add('badge-mild');
+                    badge.textContent = 'Mild';
+                } else if (severity === 'moderate') {
+                    badge.classList.add('badge-moderate');
+                    badge.textContent = 'Moderate';
+                } else if (severity === 'severe') {
+                    badge.classList.add('badge-severe');
+                    badge.textContent = 'Severe';
+                } else {
+                    badge.classList.add('badge-na');
+                    badge.textContent = scan.severity || 'N/A';
+                }
+                severityCell.appendChild(badge);
+                row.appendChild(severityCell);
+
+                // Treatment cell (truncated to 60 characters)
+                const treatmentCell = document.createElement('td');
+                treatmentCell.className = 'treatment-cell';
+                const treatmentText = scan.treatment || 'No treatment required.';
+                treatmentCell.textContent = truncateString(treatmentText, 60);
+                treatmentCell.title = treatmentText; // Tooltip with full description
+                row.appendChild(treatmentCell);
+
+                tbody.appendChild(row);
+            });
+        }
+
+        // Date helper format
+        function formatDateString(dateStr) {
+            if (!dateStr) return 'N/A';
+            try {
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return 'N/A';
+                return d.toLocaleDateString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+            } catch (e) {
+                return 'N/A';
+            }
+        }
+
+        // Truncate helper
+        function truncateString(str, num) {
+            if (!str) return '';
+            if (str.length <= num) {
+                return str;
+            }
+            return str.slice(0, num) + '...';
+        }
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Detect crop diseases instantly with advanced AI. Upload leaf photos and get accurate diagnoses, severity assessment, cause analysis, and treatment recommendations.">
+    <meta name="keywords" content="crop disease detection, agriculture AI, plant doctor, plant pathology, crop scanner, Gemini AI, farming technology">
+    <title>CropSense.AI - Instant AI Crop Disease Detection</title>
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- JavaScript -->
+    <script defer src="{{ url_for('static', filename='script.js') }}"></script>
+</head>
+<body>
+
+    <!-- Header & Navbar -->
+    <header class="navbar">
+        <div class="container navbar-container">
+            <a href="/" class="navbar-brand" id="nav-brand-logo">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 3.58 1 9.2a7.07 7.07 0 0 1-7.6 8.8Z" />
+                    <path d="M19 2c-2.26 4.33-5.27 7.14-8 10" />
+                </svg>
+                <span>CropSense.AI</span>
+            </a>
+            
+            <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
+            <nav>
+                <ul class="nav-menu" id="nav-menu">
+                    <li><a href="/" class="nav-link active" id="nav-home">Home</a></li>
+                    <li><a href="/analyze" class="nav-link" id="nav-analyze">Analyze</a></li>
+                    <li><a href="/dashboard" class="nav-link" id="nav-dashboard">Dashboard</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="hero" id="hero-section">
+            <div class="container hero-content">
+                <div class="hero-badge">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;">
+                        <polygon points="12 2 2 22 22 22"></polygon>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    <span>Smart Agricultural Diagnosis</span>
+                </div>
+                <h1>Detect Crop Diseases <span>Instantly with AI</span></h1>
+                <p>Upload a leaf photo and get instant disease diagnosis, cause and treatment recommendations powered by Gemini AI vision systems.</p>
+                <a href="/analyze" class="btn btn-primary" id="hero-cta-btn">
+                    <span>Analyze Now</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                </a>
+            </div>
+        </section>
+
+        <!-- How It Works Section -->
+        <section class="section" id="how-it-works-section">
+            <div class="container">
+                <div class="section-header">
+                    <h2>How It Works</h2>
+                    <p>Get diagnostic results in three simple, seamless steps designed for farmers, researchers, and agronomists.</p>
+                </div>
+                
+                <div class="steps-grid">
+                    <!-- Step 1 -->
+                    <div class="step-card" id="step-1-card">
+                        <div class="step-number">1</div>
+                        <div class="step-icon-container">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="17 8 12 3 7 8" />
+                                <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                        </div>
+                        <h3>Step 1: Upload a leaf photo</h3>
+                        <p>Take a clear, close-up photograph of the symptomatic plant leaf and upload it from your phone or desktop.</p>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="step-card" id="step-2-card">
+                        <div class="step-number">2</div>
+                        <div class="step-icon-container">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                                <circle cx="12" cy="12" r="4" />
+                            </svg>
+                        </div>
+                        <h3>Step 2: AI analyzes the image</h3>
+                        <p>Our advanced neural vision model scans the leaf surface to identify visual patterns, spots, lesions, and discoloration.</p>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="step-card" id="step-3-card">
+                        <div class="step-number">3</div>
+                        <div class="step-icon-container">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                                <line x1="16" y1="13" x2="8" y2="13" />
+                                <line x1="16" y1="17" x2="8" y2="17" />
+                            </svg>
+                        </div>
+                        <h3>Step 3: Get disease report instantly</h3>
+                        <p>Review the comprehensive diagnostic report detailing the crop name, disease name, infection severity, and treatment guidelines.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="section section-bg" id="features-section">
+            <div class="container">
+                <div class="section-header">
+                    <h2>Advanced AI Capabilities</h2>
+                    <p>Explore the tools we've engineered to help protect your harvest and maximize agricultural yields.</p>
+                </div>
+
+                <div class="features-grid">
+                    <!-- Feature 1 -->
+                    <div class="feature-card" id="feature-1-card">
+                        <div class="feature-icon-container">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+                                <path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5z"/>
+                            </svg>
+                        </div>
+                        <div class="feature-text">
+                            <h3>Instant AI Detection</h3>
+                            <p>Identify crop diseases in seconds using Gemini vision models. Upload an image and get immediate feedback, minimizing crop loss and damage propagation.</p>
+                        </div>
+                    </div>
+
+                    <!-- Feature 2 -->
+                    <div class="feature-card" id="feature-2-card">
+                        <div class="feature-icon-container">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                                <path d="M12 8v4" />
+                                <path d="M12 16h.01" />
+                            </svg>
+                        </div>
+                        <div class="feature-text">
+                            <h3>Severity Assessment</h3>
+                            <p>Determine infection status levels from mild to severe. Understand how critical the disease is to plan your agricultural intervention effectively.</p>
+                        </div>
+                    </div>
+
+                    <!-- Feature 3 -->
+                    <div class="feature-card" id="feature-3-card">
+                        <div class="feature-icon-container">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <rect x="2" y="4" width="20" height="16" rx="2" />
+                                <path d="M12 8v8M8 12h8" />
+                            </svg>
+                        </div>
+                        <div class="feature-text">
+                            <h3>Treatment Recommendations</h3>
+                            <p>Access organic, biological, chemical, and preventative treatment strategies tailored to the specific disease detected by the AI platform.</p>
+                        </div>
+                    </div>
+
+                    <!-- Feature 4 -->
+                    <div class="feature-card" id="feature-4-card">
+                        <div class="feature-icon-container">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                <line x1="9" y1="9" x2="15" y2="9" />
+                                <line x1="9" y1="13" x2="15" y2="13" />
+                                <line x1="9" y1="17" x2="13" y2="17" />
+                            </svg>
+                        </div>
+                        <div class="feature-text">
+                            <h3>Scan History Dashboard</h3>
+                            <p>Track your diagnosed crop scans chronologically. Review historical recommendations, track health improvements, and maintain database records.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-container">
+            <a href="/" class="footer-logo" id="footer-logo">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 3.58 1 9.2a7.07 7.07 0 0 1-7.6 8.8Z" />
+                    <path d="M19 2c-2.26 4.33-5.27 7.14-8 10" />
+                </svg>
+                <span>CropSense.AI</span>
+            </a>
+            <div class="footer-text" id="footer-text-copyright">
+                CropSense.AI &copy; 2025 | Powered by Gemini AI
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>
