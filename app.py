@@ -14,6 +14,9 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", os.urandom(24).hex())
+# File upload security
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # Max 5MB upload
+ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 # Configure Gemini API
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -55,21 +58,17 @@ def upload_image_to_supabase(image_bytes, filename, mime_type):
     if not supabase:
         return None
     try:
-        # Create bucket if it doesn't exist (fails gracefully if it already exists or if we lack permissions)
         try:
             supabase.storage.create_bucket("crop-images", options={"public": True})
         except Exception:
             pass
 
-        # Upload the file
         bucket = supabase.storage.from_("crop-images")
         bucket.upload(
             path=filename,
             file=image_bytes,
             file_options={"content-type": mime_type}
         )
-        
-        # Get public URL
         public_url = bucket.get_public_url(filename)
         return public_url
     except Exception as e:
@@ -83,14 +82,12 @@ def index():
 
 @app.route('/login')
 def login():
-    # Already logged in → send to analyze
     if session.get("user_id"):
         return redirect(url_for("analyze"))
     return render_template('login.html')
 
 @app.route('/signup')
 def signup():
-    # Already logged in → send to analyze
     if session.get("user_id"):
         return redirect(url_for("analyze"))
     return render_template('signup.html')
@@ -140,7 +137,6 @@ def auth_signup():
         if not user:
             return jsonify({"error": "Sign-up failed. The email may already be registered."}), 400
 
-        # Store session
         session["user_id"] = user.id
         session["user_email"] = user.email
 
@@ -149,7 +145,6 @@ def auth_signup():
     except Exception as e:
         error_msg = str(e)
         print(f"Sign-up error: {error_msg}")
-        # Surface friendly messages for common Supabase errors
         if "already registered" in error_msg.lower() or "already been registered" in error_msg.lower():
             return jsonify({"error": "This email is already registered. Please log in instead."}), 400
         return jsonify({"error": f"Sign-up failed: {error_msg}"}), 500
@@ -177,7 +172,6 @@ def auth_login():
         if not user:
             return jsonify({"error": "Invalid email or password."}), 401
 
-        # Store session
         session["user_id"] = user.id
         session["user_email"] = user.email
 
@@ -205,19 +199,20 @@ def detect():
         return jsonify({"error": "No image file provided in request."}), 400
 
     image_file = request.files['image']
+
     if image_file.filename == '':
         return jsonify({"error": "No image selected for uploading."}), 400
 
+    if image_file.content_type not in ALLOWED_MIME_TYPES:
+        return jsonify({"error": "Only JPEG, PNG, and WebP images are supported."}), 400
+
     try:
-        # Read image data
         image_bytes = image_file.read()
         mime_type = image_file.content_type or 'image/jpeg'
-        
-        # Check Gemini Key
+
         if not GEMINI_API_KEY:
             return jsonify({"error": "Gemini API is not configured on the server."}), 500
 
-        # Formulate instructions for JSON generation
         prompt = """
         Analyze this crop leaf image. Identify:
         1. Crop Name
@@ -236,7 +231,6 @@ def detect():
         }
         """
 
-        # Generate content using typed Parts to avoid validation errors
         response = client.models.generate_content(
             model="gemini-2.0-flash",
             contents=[
@@ -249,13 +243,11 @@ def detect():
                 )
             ]
         )
-        # Get raw text and strip markdown code fences if present
+
         result_text = response.text
         cleaned_text = result_text.strip()
         if cleaned_text.startswith("```"):
-            # Remove opening fence (e.g. ```json or ```)
             cleaned_text = cleaned_text.split("\n", 1)[-1]
-            # Remove closing fence
             if cleaned_text.endswith("```"):
                 cleaned_text = cleaned_text.rsplit("```", 1)[0].strip()
 
@@ -266,18 +258,14 @@ def detect():
             print(f"Raw Gemini response:\n{result_text}")
             return jsonify({"error": f"Failed to parse Gemini response as JSON: {str(json_err)}"}), 500
 
-        # Generate unique filename for storage
         file_ext = image_file.filename.split('.')[-1] if '.' in image_file.filename else 'jpg'
         unique_filename = f"scan_{uuid.uuid4().hex}.{file_ext}"
 
-        # Upload image to Supabase Storage or fall back to Base64 data URL
         image_url = upload_image_to_supabase(image_bytes, unique_filename, mime_type)
         if not image_url:
-            # Fallback: Base64 data URL
             encoded_image = base64.b64encode(image_bytes).decode('utf-8')
             image_url = f"data:{mime_type};base64,{encoded_image}"
 
-        # Include image_url in response so frontend can easily pass it to /save
         analysis_result["image_url"] = image_url
 
         return jsonify(analysis_result)
@@ -296,7 +284,6 @@ def history():
     user_id = session.get("user_id")
 
     try:
-        # Fetch only this user's scan results, ordered by creation date
         response = (
             supabase.table("scans")
             .select("*")
@@ -304,7 +291,6 @@ def history():
             .order("created_at", desc=True)
             .execute()
         )
-        # In supabase-py v2, response.data holds the actual rows
         return jsonify(response.data)
     except Exception as e:
         print(f"Error fetching history: {e}")
@@ -321,14 +307,12 @@ def save():
     if not data:
         return jsonify({"error": "No scan data provided."}), 400
 
-    # Ensure required fields exist
     required_fields = ["crop_name", "disease_name", "severity", "treatment"]
     for field in required_fields:
         if not data.get(field):
             return jsonify({"error": f"Missing required field: {field}"}), 400
 
     try:
-        # Insert scan record into Supabase scans table, tied to current user
         insert_data = {
             "user_id": session.get("user_id"),
             "crop_name": data.get("crop_name"),
@@ -347,4 +331,4 @@ def save():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=int(os.getenv("PORT", 5000)))
+    app.run(debug=False, port=int(os.getenv("PORT", 5000))
