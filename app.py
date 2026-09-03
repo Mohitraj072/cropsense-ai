@@ -238,7 +238,7 @@ def detect():
 
         # Generate content using typed Parts to avoid validation errors
         response = client.models.generate_content(
-            model="gemini-3.6-flash",
+            model="gemini-2.0-flash",
             contents=[
                 types.Content(
                     role="user",
