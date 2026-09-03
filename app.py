@@ -2,7 +2,8 @@ import os
 import uuid
 import base64
 import json
-from flask import Flask, render_template, request, jsonify
+from functools import wraps
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from google import genai
 from google.genai import types
 from supabase import create_client, Client
@@ -35,7 +36,17 @@ if SUPABASE_URL and SUPABASE_KEY:
 else:
     print("WARNING: SUPABASE_URL or SUPABASE_KEY not found in environment variables.")
 
-# Helpers
+# ── Auth decorator ────────────────────────────────────────────────────────────
+def login_required(f):
+    """Redirect to /login if the user has no active session."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get("user_id"):
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# ── Image upload helper ───────────────────────────────────────────────────────
 def upload_image_to_supabase(image_bytes, filename, mime_type):
     """
     Attempts to upload the scan image to Supabase Storage bucket 'crop-images'.
@@ -65,24 +76,130 @@ def upload_image_to_supabase(image_bytes, filename, mime_type):
         print(f"Failed to upload image to Supabase Storage: {e}")
         return None
 
-# Routes
+# ── Public page routes ────────────────────────────────────────────────────────
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', user_email=session.get("user_email"))
 
+@app.route('/login')
+def login():
+    # Already logged in → send to analyze
+    if session.get("user_id"):
+        return redirect(url_for("analyze"))
+    return render_template('login.html')
+
+@app.route('/signup')
+def signup():
+    # Already logged in → send to analyze
+    if session.get("user_id"):
+        return redirect(url_for("analyze"))
+    return render_template('signup.html')
+
+# ── Protected page routes ─────────────────────────────────────────────────────
 @app.route('/analyze')
+@login_required
 def analyze():
-    return render_template('analyze.html')
+    return render_template('analyze.html', user_email=session.get("user_email"))
 
 @app.route('/result')
+@login_required
 def result():
-    return render_template('result.html')
+    return render_template('result.html', user_email=session.get("user_email"))
 
 @app.route('/dashboard')
+@login_required
 def dashboard():
-    return render_template('dashboard.html')
+    return render_template('dashboard.html', user_email=session.get("user_email"))
 
+# ── Auth API routes ───────────────────────────────────────────────────────────
+@app.route('/auth/signup', methods=['POST'])
+def auth_signup():
+    """Create a new Supabase Auth user and log them in."""
+    data = request.get_json() or {}
+    email = (data.get("email") or "").strip()
+    password = data.get("password") or ""
+    name = (data.get("name") or "").strip()
+
+    if not email or not password:
+        return jsonify({"error": "Email and password are required."}), 400
+    if len(password) < 6:
+        return jsonify({"error": "Password must be at least 6 characters."}), 400
+    if not supabase:
+        return jsonify({"error": "Authentication service is not configured."}), 500
+
+    try:
+        response = supabase.auth.sign_up({
+            "email": email,
+            "password": password,
+            "options": {
+                "data": {"full_name": name}
+            }
+        })
+
+        user = response.user
+        if not user:
+            return jsonify({"error": "Sign-up failed. The email may already be registered."}), 400
+
+        # Store session
+        session["user_id"] = user.id
+        session["user_email"] = user.email
+
+        return jsonify({"success": True, "redirect": "/analyze"})
+
+    except Exception as e:
+        error_msg = str(e)
+        print(f"Sign-up error: {error_msg}")
+        # Surface friendly messages for common Supabase errors
+        if "already registered" in error_msg.lower() or "already been registered" in error_msg.lower():
+            return jsonify({"error": "This email is already registered. Please log in instead."}), 400
+        return jsonify({"error": f"Sign-up failed: {error_msg}"}), 500
+
+
+@app.route('/auth/login', methods=['POST'])
+def auth_login():
+    """Authenticate an existing Supabase Auth user and create a session."""
+    data = request.get_json() or {}
+    email = (data.get("email") or "").strip()
+    password = data.get("password") or ""
+
+    if not email or not password:
+        return jsonify({"error": "Email and password are required."}), 400
+    if not supabase:
+        return jsonify({"error": "Authentication service is not configured."}), 500
+
+    try:
+        response = supabase.auth.sign_in_with_password({
+            "email": email,
+            "password": password
+        })
+
+        user = response.user
+        if not user:
+            return jsonify({"error": "Invalid email or password."}), 401
+
+        # Store session
+        session["user_id"] = user.id
+        session["user_email"] = user.email
+
+        return jsonify({"success": True, "redirect": "/analyze"})
+
+    except Exception as e:
+        error_msg = str(e)
+        print(f"Login error: {error_msg}")
+        if "invalid" in error_msg.lower() or "credentials" in error_msg.lower():
+            return jsonify({"error": "Invalid email or password."}), 401
+        return jsonify({"error": f"Login failed: {error_msg}"}), 500
+
+
+@app.route('/auth/logout')
+def auth_logout():
+    """Clear the Flask session and redirect to login."""
+    session.clear()
+    return redirect(url_for("login"))
+
+# ── Protected API routes ──────────────────────────────────────────────────────
 @app.route('/detect', methods=['POST'])
+@login_required
 def detect():
     if 'image' not in request.files:
         return jsonify({"error": "No image file provided in request."}), 400
@@ -169,21 +286,33 @@ def detect():
         print(f"Error during detection: {e}")
         return jsonify({"error": f"An error occurred during analysis: {str(e)}"}), 500
 
+
 @app.route('/history', methods=['GET'])
+@login_required
 def history():
     if not supabase:
         return jsonify({"error": "Supabase connection is not configured."}), 500
 
+    user_id = session.get("user_id")
+
     try:
-        # Fetch scan results from the database ordered by creation date
-        response = supabase.table("scans").select("*").order("created_at", desc=True).execute()
+        # Fetch only this user's scan results, ordered by creation date
+        response = (
+            supabase.table("scans")
+            .select("*")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .execute()
+        )
         # In supabase-py v2, response.data holds the actual rows
         return jsonify(response.data)
     except Exception as e:
         print(f"Error fetching history: {e}")
         return jsonify({"error": f"Failed to retrieve history: {str(e)}"}), 500
 
+
 @app.route('/save', methods=['POST'])
+@login_required
 def save():
     if not supabase:
         return jsonify({"error": "Supabase connection is not configured."}), 500
@@ -199,8 +328,9 @@ def save():
             return jsonify({"error": f"Missing required field: {field}"}), 400
 
     try:
-        # Insert scan record into Supabase scans table
+        # Insert scan record into Supabase scans table, tied to current user
         insert_data = {
+            "user_id": session.get("user_id"),
             "crop_name": data.get("crop_name"),
             "disease_name": data.get("disease_name"),
             "severity": data.get("severity"),
@@ -215,6 +345,6 @@ def save():
         print(f"Error saving scan: {e}")
         return jsonify({"error": f"Failed to save scan record: {str(e)}"}), 500
 
+
 if __name__ == '__main__':
     app.run(debug=True, port=int(os.getenv("PORT", 5000)))
-

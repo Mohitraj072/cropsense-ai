@@ -34,6 +34,12 @@
                     <li><a href="/" class="nav-link" id="nav-home">Home</a></li>
                     <li><a href="/analyze" class="nav-link" id="nav-analyze">Analyze</a></li>
                     <li><a href="/dashboard" class="nav-link active" id="nav-dashboard">Dashboard</a></li>
+                    {% if user_email %}
+                    <li><a href="/auth/logout" class="nav-link nav-auth" id="nav-logout">Logout</a></li>
+                    {% else %}
+                    <li><a href="/login" class="nav-link nav-auth" id="nav-login">Login</a></li>
+                    <li><a href="/signup" class="nav-link nav-auth nav-signup" id="nav-signup">Sign Up</a></li>
+                    {% endif %}
                 </ul>
             </nav>
         </div>
