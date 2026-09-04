@@ -331,4 +331,7 @@ def save():
 
 
 if __name__ == '__main__':
-    app.run(debug=False, port=int(os.getenv("PORT", 5000))
+    app.run(debug=False, port=int(os.getenv("PORT", 5000)))
+
+application = app
+            
