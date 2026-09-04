@@ -2,12 +2,15 @@
   "version": 2,
   "builds": [
     {
-      "src": "static/**",
-      "use": "@vercel/static"
+      "src": "app.py",
+      "use": "@vercel/python",
+      "config": {
+        "runtime": "python3.9"
+      }
     },
     {
-      "src": "app.py",
-      "use": "@vercel/python"
+      "src": "static/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -21,4 +24,3 @@
     }
   ]
 }
-
