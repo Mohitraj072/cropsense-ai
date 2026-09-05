@@ -4,8 +4,7 @@ import base64
 import json
 from functools import wraps
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
-from google import genai
-from google.genai import types
+from groq import Groq
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
@@ -17,20 +16,17 @@ app.secret_key = os.getenv("SECRET_KEY", os.urandom(24).hex())
 app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # Max 5MB upload
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
-# Gemini API Setup
-# Source: ai.google.dev/pricing (updated 2026-09-04)
-# gemini-3.8-flash     = latest Flash model, current default in Google AI Studio (Sept 2026)
-# gemini-3.5-flash-lite = lightweight fallback, also on free tier
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL = "gemini-3.8-flash"
-GEMINI_FALLBACK_MODEL = "gemini-3.5-flash-lite"
+# Groq API Setup
+# Model: llama-3.2-11b-vision-preview — free tier, supports image inputs
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_MODEL = "llama-3.2-11b-vision-preview"
 
-gemini_client = None
-if GEMINI_API_KEY:
-    gemini_client = genai.Client(api_key=GEMINI_API_KEY)
-    print("Gemini client initialized. Primary model: " + GEMINI_MODEL)
+groq_client = None
+if GROQ_API_KEY:
+    groq_client = Groq(api_key=GROQ_API_KEY)
+    print("Groq client initialized. Model: " + GROQ_MODEL)
 else:
-    print("WARNING: GEMINI_API_KEY not found in environment variables.")
+    print("WARNING: GROQ_API_KEY not found in environment variables.")
 
 # Supabase Setup
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -66,31 +62,38 @@ def analyze_crop_image(image_bytes, mime_type):
         '  "treatment": "recommended treatment or N/A if healthy" }\n\n'
         "Output ONLY raw JSON. No markdown, no code fences, no extra text."
     )
-    image_part = types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
-    text_part = types.Part.from_text(text=prompt)
-    models_to_try = [GEMINI_MODEL, GEMINI_FALLBACK_MODEL]
-    last_error = None
-    for model_name in models_to_try:
-        try:
-            response = gemini_client.models.generate_content(
-                model=model_name,
-                contents=[types.Content(role="user", parts=[image_part, text_part])],
-                config=types.GenerateContentConfig(response_mime_type="application/json")
-            )
-            raw = response.text.strip()
-            print("Gemini [" + model_name + "]: " + raw[:200])
-            return raw, model_name
-        except Exception as e:
-            es = str(e)
-            print("Gemini [" + model_name + "] error: " + es)
-            if "403" in es or "PERMISSION_DENIED" in es or "permission" in es.lower():
-                last_error = e
-                continue
-            raise e
-    raise Exception("All Gemini models failed. Last error: " + str(last_error))
+    # Encode image bytes to base64 for Groq vision API
+    b64_image = base64.b64encode(image_bytes).decode("utf-8")
+    data_url = "data:" + mime_type + ";base64," + b64_image
+    try:
+        response = groq_client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": data_url}
+                        },
+                        {
+                            "type": "text",
+                            "text": prompt
+                        }
+                    ]
+                }
+            ],
+            max_tokens=512,
+            temperature=0.1
+        )
+        raw = response.choices[0].message.content.strip()
+        print("Groq [" + GROQ_MODEL + "]: " + raw[:200])
+        return raw, GROQ_MODEL
+    except Exception as e:
+        raise Exception("Groq analysis failed: " + str(e))
 
 
-def parse_gemini_json(raw_text):
+def parse_ai_json(raw_text):
     text = raw_text.strip()
     if text.startswith("```"):
         lines = text.split("\n")[1:]
@@ -219,15 +222,15 @@ def detect():
         return jsonify({"error": "No image selected."}), 400
     if image_file.content_type not in ALLOWED_MIME_TYPES:
         return jsonify({"error": "Only JPEG, PNG, and WebP images are supported."}), 400
-    if not gemini_client:
-        return jsonify({"error": "Gemini API not configured on server."}), 500
+    if not groq_client:
+        return jsonify({"error": "Groq API not configured on server. Set GROQ_API_KEY in Vercel environment variables."}), 500
     try:
         image_bytes = image_file.read()
         mime_type = image_file.content_type or "image/jpeg"
         raw_text, used_model = analyze_crop_image(image_bytes, mime_type)
         print("Analysis complete using: " + used_model)
         try:
-            analysis_result = parse_gemini_json(raw_text)
+            analysis_result = parse_ai_json(raw_text)
         except json.JSONDecodeError as json_err:
             print("JSON error: " + str(json_err) + "\nRaw: " + raw_text)
             return jsonify({"error": "AI returned invalid JSON. Raw: " + raw_text[:300]}), 500
@@ -245,9 +248,9 @@ def detect():
     except Exception as e:
         em = str(e)
         print("Detection error: " + em)
-        if "403" in em or "PERMISSION_DENIED" in em:
-            return jsonify({"error": "API access denied (403). Regenerate your key at aistudio.google.com/apikey and update it in Vercel."}), 503
-        elif "quota" in em.lower() or "rate" in em.lower():
+        if "401" in em or "invalid_api_key" in em.lower():
+            return jsonify({"error": "Invalid Groq API key. Check GROQ_API_KEY in Vercel environment variables."}), 503
+        elif "rate" in em.lower() or "limit" in em.lower():
             return jsonify({"error": "Rate limit exceeded. Please wait and try again."}), 429
         return jsonify({"error": "Analysis failed: " + em}), 500
 
