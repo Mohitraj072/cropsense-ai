@@ -17,9 +17,12 @@ app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # Max 5MB upload
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 # Groq API Setup
-# Model: llama-3.2-11b-vision-preview — free tier, supports image inputs
+# Model is read from GROQ_MODEL env var so future deprecations require only a
+# Vercel environment variable update — no code changes needed.
+# Check https://console.groq.com/docs/models for the latest supported vision-
+# capable model IDs before updating.
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_MODEL = "llama-3.2-11b-vision-preview"
+GROQ_MODEL = os.getenv("GROQ_MODEL", "qwen/qwen3.6-27b")  # Current vision model (Sept 2026)
 
 groq_client = None
 if GROQ_API_KEY:
@@ -90,7 +93,16 @@ def analyze_crop_image(image_bytes, mime_type):
         print("Groq [" + GROQ_MODEL + "]: " + raw[:200])
         return raw, GROQ_MODEL
     except Exception as e:
-        raise Exception("Groq analysis failed: " + str(e))
+        err_str = str(e)
+        # Surface model deprecation issues with a clear, actionable message
+        if "model_decommissioned" in err_str or "model_not_found" in err_str:
+            raise Exception(
+                "The AI vision model '" + GROQ_MODEL + "' is no longer available. "
+                "Please update the GROQ_MODEL environment variable in Vercel to a "
+                "currently supported vision model. "
+                "See: https://console.groq.com/docs/models"
+            )
+        raise Exception("Groq analysis failed: " + err_str)
 
 
 def parse_ai_json(raw_text):
@@ -250,6 +262,8 @@ def detect():
         print("Detection error: " + em)
         if "401" in em or "invalid_api_key" in em.lower():
             return jsonify({"error": "Invalid Groq API key. Check GROQ_API_KEY in Vercel environment variables."}), 503
+        elif "model_decommissioned" in em or "model_not_found" in em or "no longer available" in em:
+            return jsonify({"error": em}), 503
         elif "rate" in em.lower() or "limit" in em.lower():
             return jsonify({"error": "Rate limit exceeded. Please wait and try again."}), 429
         return jsonify({"error": "Analysis failed: " + em}), 500
