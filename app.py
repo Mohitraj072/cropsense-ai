@@ -232,7 +232,7 @@ def detect():
         """
 
         response = client.models.generate_content(
-            model="gemini-2.0-flash-exp",
+            model="gemini-3.5-flash",
             contents=[
                 types.Content(
                     role="user",
