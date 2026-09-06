@@ -4,7 +4,7 @@ import base64
 import json
 from functools import wraps
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
-from groq import Groq
+import google.generativeai as genai
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
@@ -16,20 +16,21 @@ app.secret_key = os.getenv("SECRET_KEY", os.urandom(24).hex())
 app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # Max 5MB upload
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
-# Groq API Setup
-# Model is read from GROQ_MODEL env var so future deprecations require only a
+# Google Gemini API Setup
+# Model is read from GEMINI_MODEL env var so future deprecations require only a
 # Vercel environment variable update — no code changes needed.
-# Check https://console.groq.com/docs/models for the latest supported vision-
+# Check https://ai.google.dev/gemini-api/docs/models for the latest supported vision-
 # capable model IDs before updating.
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "qwen/qwen3.6-27b")  # Current vision model (Sept 2026)
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")  # Current vision model
 
-groq_client = None
-if GROQ_API_KEY:
-    groq_client = Groq(api_key=GROQ_API_KEY)
-    print("Groq client initialized. Model: " + GROQ_MODEL)
+gemini_client = None
+if GOOGLE_API_KEY:
+    genai.configure(api_key=GOOGLE_API_KEY)
+    gemini_client = genai.GenerativeModel(GEMINI_MODEL)
+    print("Gemini client initialized. Model: " + GEMINI_MODEL)
 else:
-    print("WARNING: GROQ_API_KEY not found in environment variables.")
+    print("WARNING: GOOGLE_API_KEY not found in environment variables.")
 
 # Supabase Setup
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -65,44 +66,30 @@ def analyze_crop_image(image_bytes, mime_type):
         '  "treatment": "recommended treatment or N/A if healthy" }\n\n'
         "Output ONLY raw JSON. No markdown, no code fences, no extra text."
     )
-    # Encode image bytes to base64 for Groq vision API
-    b64_image = base64.b64encode(image_bytes).decode("utf-8")
-    data_url = "data:" + mime_type + ";base64," + b64_image
+    # Pass image bytes directly to Gemini vision API
+    image_part = {"mime_type": mime_type, "data": image_bytes}
     try:
-        response = groq_client.chat.completions.create(
-            model=GROQ_MODEL,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": data_url}
-                        },
-                        {
-                            "type": "text",
-                            "text": prompt
-                        }
-                    ]
-                }
-            ],
-            max_tokens=512,
-            temperature=0.1
+        response = gemini_client.generate_content(
+            [image_part, prompt],
+            generation_config=genai.GenerationConfig(
+                max_output_tokens=512,
+                temperature=0.1
+            )
         )
-        raw = response.choices[0].message.content.strip()
-        print("Groq [" + GROQ_MODEL + "]: " + raw[:200])
-        return raw, GROQ_MODEL
+        raw = response.text.strip()
+        print("Gemini [" + GEMINI_MODEL + "]: " + raw[:200])
+        return raw, GEMINI_MODEL
     except Exception as e:
         err_str = str(e)
         # Surface model deprecation issues with a clear, actionable message
-        if "model_decommissioned" in err_str or "model_not_found" in err_str:
+        if "not found" in err_str.lower() or "deprecated" in err_str.lower():
             raise Exception(
-                "The AI vision model '" + GROQ_MODEL + "' is no longer available. "
-                "Please update the GROQ_MODEL environment variable in Vercel to a "
+                "The AI vision model '" + GEMINI_MODEL + "' is no longer available. "
+                "Please update the GEMINI_MODEL environment variable in Vercel to a "
                 "currently supported vision model. "
-                "See: https://console.groq.com/docs/models"
+                "See: https://ai.google.dev/gemini-api/docs/models"
             )
-        raise Exception("Groq analysis failed: " + err_str)
+        raise Exception("Gemini analysis failed: " + err_str)
 
 
 def parse_ai_json(raw_text):
@@ -234,8 +221,8 @@ def detect():
         return jsonify({"error": "No image selected."}), 400
     if image_file.content_type not in ALLOWED_MIME_TYPES:
         return jsonify({"error": "Only JPEG, PNG, and WebP images are supported."}), 400
-    if not groq_client:
-        return jsonify({"error": "Groq API not configured on server. Set GROQ_API_KEY in Vercel environment variables."}), 500
+    if not gemini_client:
+        return jsonify({"error": "Google Gemini API not configured on server. Set GOOGLE_API_KEY in Vercel environment variables."}), 500
     try:
         image_bytes = image_file.read()
         mime_type = image_file.content_type or "image/jpeg"
@@ -260,8 +247,8 @@ def detect():
     except Exception as e:
         em = str(e)
         print("Detection error: " + em)
-        if "401" in em or "invalid_api_key" in em.lower():
-            return jsonify({"error": "Invalid Groq API key. Check GROQ_API_KEY in Vercel environment variables."}), 503
+        if "401" in em or "invalid_api_key" in em.lower() or "api_key_invalid" in em.lower():
+            return jsonify({"error": "Invalid Google API key. Check GOOGLE_API_KEY in Vercel environment variables."}), 503
         elif "model_decommissioned" in em or "model_not_found" in em or "no longer available" in em:
             return jsonify({"error": em}), 503
         elif "rate" in em.lower() or "limit" in em.lower():
