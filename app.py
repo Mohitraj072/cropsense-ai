@@ -2,9 +2,9 @@ import os
 import uuid
 import base64
 import json
+import requests
 from functools import wraps
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
-import google.generativeai as genai
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
@@ -16,21 +16,14 @@ app.secret_key = os.getenv("SECRET_KEY", os.urandom(24).hex())
 app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # Max 5MB upload
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
-# Google Gemini API Setup
-# Model is read from GEMINI_MODEL env var so future deprecations require only a
-# Vercel environment variable update — no code changes needed.
-# Check https://ai.google.dev/gemini-api/docs/models for the latest supported vision-
-# capable model IDs before updating.
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")  # Current vision model
+# OpenRouter API Setup
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-2.0-flash-001")
 
-gemini_client = None
-if GOOGLE_API_KEY:
-    genai.configure(api_key=GOOGLE_API_KEY)
-    gemini_client = genai.GenerativeModel(GEMINI_MODEL)
-    print("Gemini client initialized. Model: " + GEMINI_MODEL)
+if OPENROUTER_API_KEY:
+    print("OpenRouter client ready. Model: " + OPENROUTER_MODEL)
 else:
-    print("WARNING: GOOGLE_API_KEY not found in environment variables.")
+    print("WARNING: OPENROUTER_API_KEY not found in environment variables.")
 
 # Supabase Setup
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -66,30 +59,56 @@ def analyze_crop_image(image_bytes, mime_type):
         '  "treatment": "recommended treatment or N/A if healthy" }\n\n'
         "Output ONLY raw JSON. No markdown, no code fences, no extra text."
     )
-    # Pass image bytes directly to Gemini vision API
-    image_part = {"mime_type": mime_type, "data": image_bytes}
+
+    encoded_image = base64.b64encode(image_bytes).decode("utf-8")
+
     try:
-        response = gemini_client.generate_content(
-            [image_part, prompt],
-            generation_config=genai.GenerationConfig(
-                max_output_tokens=512,
-                temperature=0.1
-            )
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": OPENROUTER_MODEL,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:{mime_type};base64,{encoded_image}"
+                                }
+                            },
+                            {
+                                "type": "text",
+                                "text": prompt
+                            }
+                        ]
+                    }
+                ]
+            },
+            timeout=30
         )
-        raw = response.text.strip()
-        print("Gemini [" + GEMINI_MODEL + "]: " + raw[:200])
-        return raw, GEMINI_MODEL
+
+        if response.status_code == 401:
+            raise Exception("Invalid OpenRouter API key. Check OPENROUTER_API_KEY in Vercel.")
+        elif response.status_code == 402:
+            raise Exception("OpenRouter account has no credits. Add credits at openrouter.ai.")
+        elif response.status_code == 429:
+            raise Exception("Rate limit exceeded. Please wait and try again.")
+        elif response.status_code != 200:
+            raise Exception(f"OpenRouter API error {response.status_code}: {response.text[:200]}")
+
+        raw = response.json()["choices"][0]["message"]["content"].strip()
+        print("OpenRouter [" + OPENROUTER_MODEL + "]: " + raw[:200])
+        return raw, OPENROUTER_MODEL
+
+    except requests.exceptions.Timeout:
+        raise Exception("Request timed out. Please try again.")
     except Exception as e:
-        err_str = str(e)
-        # Surface model deprecation issues with a clear, actionable message
-        if "not found" in err_str.lower() or "deprecated" in err_str.lower():
-            raise Exception(
-                "The AI vision model '" + GEMINI_MODEL + "' is no longer available. "
-                "Please update the GEMINI_MODEL environment variable in Vercel to a "
-                "currently supported vision model. "
-                "See: https://ai.google.dev/gemini-api/docs/models"
-            )
-        raise Exception("Gemini analysis failed: " + err_str)
+        raise Exception("Analysis failed: " + str(e))
 
 
 def parse_ai_json(raw_text):
@@ -221,8 +240,8 @@ def detect():
         return jsonify({"error": "No image selected."}), 400
     if image_file.content_type not in ALLOWED_MIME_TYPES:
         return jsonify({"error": "Only JPEG, PNG, and WebP images are supported."}), 400
-    if not gemini_client:
-        return jsonify({"error": "Google Gemini API not configured on server. Set GOOGLE_API_KEY in Vercel environment variables."}), 500
+    if not OPENROUTER_API_KEY:
+        return jsonify({"error": "OpenRouter API not configured on server. Set OPENROUTER_API_KEY in Vercel environment variables."}), 500
     try:
         image_bytes = image_file.read()
         mime_type = image_file.content_type or "image/jpeg"
@@ -247,12 +266,12 @@ def detect():
     except Exception as e:
         em = str(e)
         print("Detection error: " + em)
-        if "401" in em or "invalid_api_key" in em.lower() or "api_key_invalid" in em.lower():
-            return jsonify({"error": "Invalid Google API key. Check GOOGLE_API_KEY in Vercel environment variables."}), 503
-        elif "model_decommissioned" in em or "model_not_found" in em or "no longer available" in em:
-            return jsonify({"error": em}), 503
-        elif "rate" in em.lower() or "limit" in em.lower():
+        if "401" in em or "invalid" in em.lower() and "api key" in em.lower():
+            return jsonify({"error": "Invalid OpenRouter API key. Check OPENROUTER_API_KEY in Vercel."}), 503
+        elif "429" in em or "rate" in em.lower():
             return jsonify({"error": "Rate limit exceeded. Please wait and try again."}), 429
+        elif "402" in em or "credits" in em.lower():
+            return jsonify({"error": "OpenRouter account has no credits. Add credits at openrouter.ai."}), 503
         return jsonify({"error": "Analysis failed: " + em}), 500
 
 
