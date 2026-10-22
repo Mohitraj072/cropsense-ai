@@ -36,3 +36,9 @@ alter table public.scans add column if not exists disease_name_en text;
 
 -- Confidence score
 alter table public.scans add column if not exists confidence integer;
+
+-- Organic and chemical treatment options, prevention tips, and safety note
+alter table public.scans add column if not exists organic_options jsonb default '[]'::jsonb;
+alter table public.scans add column if not exists chemical_options jsonb default '[]'::jsonb;
+alter table public.scans add column if not exists prevention_tips jsonb default '[]'::jsonb;
+alter table public.scans add column if not exists safety_note text;
