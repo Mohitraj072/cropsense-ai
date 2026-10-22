@@ -852,6 +852,179 @@ body {
     text-align: left;
 }
 
+.result-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.speech-controls-wrapper {
+    display: inline-flex;
+    align-items: center;
+}
+
+.btn-speech-listen {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: #e8f5e9;
+    border: 1.5px solid var(--accent);
+    color: var(--primary);
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.btn-speech-listen:hover {
+    background: var(--accent);
+    color: #ffffff;
+    box-shadow: 0 2px 8px var(--accent-glow);
+    transform: translateY(-1px);
+}
+
+.btn-speech-listen:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.speech-active-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #f1f8f3;
+    border: 1.5px solid var(--accent);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    animation: fadeInDown 0.25s ease;
+}
+
+.speech-soundwaves {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 18px;
+    padding: 0 4px;
+}
+
+.soundwave-bar {
+    width: 3px;
+    background: var(--accent);
+    border-radius: 2px;
+    animation: soundwave 1s ease-in-out infinite;
+}
+
+.soundwave-bar.bar-1 { height: 8px; animation-delay: 0s; }
+.soundwave-bar.bar-2 { height: 16px; animation-delay: 0.2s; }
+.soundwave-bar.bar-3 { height: 11px; animation-delay: 0.4s; }
+
+@keyframes soundwave {
+    0%, 100% { transform: scaleY(0.4); }
+    50% { transform: scaleY(1); }
+}
+
+.speech-soundwaves.paused .soundwave-bar {
+    animation-play-state: paused;
+    opacity: 0.5;
+}
+
+.btn-speech-ctrl {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-speech-ctrl:hover {
+    background: #e2ede5;
+    color: var(--primary);
+}
+
+.btn-speech-ctrl:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
+}
+
+.btn-speech-ctrl-stop {
+    color: #c62828;
+    border-color: #ffcdd2;
+    background: #fff5f5;
+}
+
+.btn-speech-ctrl-stop:hover {
+    background: #ffebee;
+    color: #b71c1c;
+    border-color: #ef9a9a;
+}
+
+/* Voice Fallback Banner */
+.speech-fallback-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 10px 16px;
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: var(--radius-sm);
+    margin-bottom: 20px;
+    animation: fadeInDown 0.3s ease;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.speech-fallback-msg {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #b78103;
+    font-size: 0.88rem;
+    font-weight: 500;
+}
+
+.speech-fallback-msg svg {
+    color: #f57c00;
+    flex-shrink: 0;
+}
+
+.btn-fallback-en {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #ffffff;
+    border: 1px solid #f57c00;
+    color: #e65100;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-fallback-en:hover {
+    background: #f57c00;
+    color: #ffffff;
+}
+
+.btn-fallback-en:focus-visible {
+    outline: 2px solid #e65100;
+    outline-offset: 1px;
+}
+
 .lang-selector-container {
     display: flex;
     align-items: center;
@@ -1106,6 +1279,16 @@ body {
     .result-card h1 {
         font-size: 1.75rem;
         margin-bottom: 24px;
+    }
+
+    .result-header-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .speech-fallback-banner {
+        flex-direction: column;
+        align-items: flex-start;
     }
     
     .actions-row {
@@ -3241,6 +3424,8 @@ body {
     .retake-banner,
     .alert-message,
     .lang-selector-container,
+    .speech-controls-wrapper,
+    .speech-fallback-banner,
     #btn-download-pdf,
     #btn-analyze-another,
     #btn-save,

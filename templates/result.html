@@ -51,19 +51,70 @@
             <div class="result-card">
                 <div class="result-header-row">
                     <h1 data-i18n="report_title">Disease Analysis Report</h1>
-                    <div class="lang-selector-container">
-                        <label for="result-lang-select" class="lang-select-label" data-i18n="language_label">Language:</label>
-                        <select class="select-input select-lang" id="result-lang-select" data-i18n-lang-select onchange="handleResultLanguageChange(this.value)">
-                            <option value="en">English</option>
-                            <option value="hi">हिन्दी (Hindi)</option>
-                            <option value="kn">ಕನ್ನಡ (Kannada)</option>
-                            <option value="ta">தமிழ் (Tamil)</option>
-                            <option value="te">తెలుగు (Telugu)</option>
-                            <option value="mr">मराठी (Marathi)</option>
-                            <option value="bn">বাংলা (Bengali)</option>
-                            <option value="ml">മലയാളം (Malayalam)</option>
-                        </select>
+                    <div class="result-header-actions">
+                        <!-- Listen / Web Speech Controls -->
+                        <div class="speech-controls-wrapper" id="speech-controls-wrapper" role="region" aria-label="Audio reader controls">
+                            <button type="button" class="btn-speech-listen" id="btn-speech-listen" onclick="handleSpeechPlay()" aria-label="Listen to report aloud">
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                                </svg>
+                                <span id="speech-listen-label" data-i18n="speech_listen">Listen</span>
+                            </button>
+
+                            <div class="speech-active-bar" id="speech-active-bar" style="display: none;">
+                                <div class="speech-soundwaves" id="speech-soundwaves" aria-hidden="true" title="Speaking">
+                                    <span class="soundwave-bar bar-1"></span>
+                                    <span class="soundwave-bar bar-2"></span>
+                                    <span class="soundwave-bar bar-3"></span>
+                                </div>
+                                <button type="button" class="btn-speech-ctrl" id="btn-speech-pause" onclick="handleSpeechPauseResume()" aria-label="Pause narration" title="Pause">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" id="icon-pause-resume" aria-hidden="true">
+                                        <rect x="6" y="4" width="4" height="16"></rect>
+                                        <rect x="14" y="4" width="4" height="16"></rect>
+                                    </svg>
+                                    <span id="speech-pause-label" data-i18n="speech_pause">Pause</span>
+                                </button>
+                                <button type="button" class="btn-speech-ctrl btn-speech-ctrl-stop" id="btn-speech-stop" onclick="handleSpeechStop()" aria-label="Stop narration" title="Stop">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
+                                        <rect x="5" y="5" width="14" height="14" rx="2"></rect>
+                                    </svg>
+                                    <span data-i18n="speech_stop">Stop</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Language Selector -->
+                        <div class="lang-selector-container">
+                            <label for="result-lang-select" class="lang-select-label" data-i18n="language_label">Language:</label>
+                            <select class="select-input select-lang" id="result-lang-select" data-i18n-lang-select onchange="handleResultLanguageChange(this.value)">
+                                <option value="en">English</option>
+                                <option value="hi">हिन्दी (Hindi)</option>
+                                <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                                <option value="ta">தமிழ் (Tamil)</option>
+                                <option value="te">తెలుగు (Telugu)</option>
+                                <option value="mr">मराठी (Marathi)</option>
+                                <option value="bn">বাংলা (Bengali)</option>
+                                <option value="ml">മലയാളം (Malayalam)</option>
+                            </select>
+                        </div>
                     </div>
+                </div>
+
+                <!-- Speech Voice Fallback Banner (shown if voice for selected language isn't installed) -->
+                <div class="speech-fallback-banner" id="speech-fallback-banner" style="display: none;" role="status">
+                    <div class="speech-fallback-msg">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        <span id="speech-fallback-text" data-i18n="speech_no_voice">This language's voice isn't installed on your device.</span>
+                    </div>
+                    <button type="button" class="btn-fallback-en" id="btn-fallback-en" onclick="handleSpeechPlayEnglish()">
+                        <span data-i18n="speech_listen_english">Listen in English</span>
+                    </button>
                 </div>
 
                 <!-- Retake Guidance Warning Banner (shown when needs_retake is true) -->
@@ -452,6 +503,14 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            // Check Web Speech API support
+            if (!('speechSynthesis' in window)) {
+                const speechWrapper = document.getElementById('speech-controls-wrapper');
+                if (speechWrapper) {
+                    speechWrapper.style.display = 'none';
+                }
+            }
+
             // Load and parse scan results from localStorage
             const localData = localStorage.getItem('scanResult');
             
@@ -619,6 +678,9 @@
 
         // Language change handler calling /translate
         async function handleResultLanguageChange(newLang) {
+            if (typeof handleSpeechStop === 'function') {
+                handleSpeechStop();
+            }
             if (!scanData) return;
             if (scanData.language === newLang) return;
 
@@ -980,6 +1042,277 @@
                 alertMsg.classList.add('show');
             }
         }
+
+        // ══════════════════════════════════════════════════════════════════
+        // Web Speech API (speechSynthesis) Reader & Chunk Queue Engine
+        // ══════════════════════════════════════════════════════════════════
+        let speechQueue = [];
+        let speechQueueIndex = 0;
+        let isSpeaking = false;
+        let isPaused = false;
+        let currentVoice = null;
+        let targetSpeechLocale = 'en-IN';
+
+        // Build comprehensive speech narration from report fields
+        function buildSpeechText(data, lang) {
+            if (!data) return [];
+            const activeLang = lang || data.language || getCurrentLanguage();
+            const parts = [];
+
+            // Crop Name
+            const cropLabel = (typeof t === 'function' ? t('report_crop', activeLang) : '') || 'Crop Name';
+            if (data.crop_name) {
+                parts.push(`${cropLabel}: ${data.crop_name}.`);
+            }
+
+            // Disease Diagnosis
+            const diseaseLabel = (typeof t === 'function' ? t('report_diagnosis', activeLang) : '') || 'Disease Diagnosis';
+            if (data.disease_name) {
+                parts.push(`${diseaseLabel}: ${data.disease_name}.`);
+            }
+
+            // Severity Level
+            const severityLabel = (typeof t === 'function' ? t('report_severity', activeLang) : '') || 'Severity Level';
+            if (data.severity) {
+                const sevKey = data.severity.toLowerCase().trim();
+                const sevText = (typeof tSeverity === 'function' ? tSeverity(sevKey, activeLang) : '') || data.severity;
+                parts.push(`${severityLabel}: ${sevText}.`);
+            }
+
+            // Cause of Disease
+            const causeLabel = (typeof t === 'function' ? t('report_cause', activeLang) : '') || 'Cause of Disease';
+            if (data.cause && data.cause.trim()) {
+                parts.push(`${causeLabel}: ${data.cause.trim()}`);
+            }
+
+            // Recommended Treatment
+            const treatmentLabel = (typeof t === 'function' ? t('report_treatment', activeLang) : '') || 'Recommended Treatment';
+            const organicList = Array.isArray(data.organic_options) ? data.organic_options.filter(s => String(s).trim().length > 0) : [];
+            const chemicalList = Array.isArray(data.chemical_options) ? data.chemical_options.filter(s => String(s).trim().length > 0) : [];
+
+            if (organicList.length > 0 || chemicalList.length > 0) {
+                parts.push(`${treatmentLabel}.`);
+                if (organicList.length > 0) {
+                    const orgLabel = (typeof t === 'function' ? t('tab_organic', activeLang) : '') || 'Organic Options';
+                    parts.push(`${orgLabel}: ${organicList.join('. ')}.`);
+                }
+                if (chemicalList.length > 0) {
+                    const chemLabel = (typeof t === 'function' ? t('tab_chemical', activeLang) : '') || 'Chemical Options';
+                    parts.push(`${chemLabel}: ${chemicalList.join('. ')}.`);
+                }
+            } else if (data.treatment && data.treatment.trim() && data.treatment.toLowerCase() !== 'n/a') {
+                parts.push(`${treatmentLabel}: ${data.treatment.trim()}`);
+            }
+
+            // Prevention Tips
+            const preventionList = Array.isArray(data.prevention_tips) ? data.prevention_tips.filter(s => String(s).trim().length > 0) : [];
+            if (preventionList.length > 0) {
+                const prevLabel = (typeof t === 'function' ? t('section_prevention', activeLang) : '') || 'Prevention Tips';
+                parts.push(`${prevLabel}: ${preventionList.join('. ')}.`);
+            }
+
+            // Safety Precautions
+            if (data.safety_note && data.safety_note.trim()) {
+                const safetyLabel = (typeof t === 'function' ? t('safety_note_title', activeLang) : '') || 'Safety Precautions';
+                parts.push(`${safetyLabel}: ${data.safety_note.trim()}`);
+            }
+
+            return parts;
+        }
+
+        // Subdivide long sentences into ~140 character chunks so Chrome speech synthesis never cuts off
+        function subdivideChunk(chunkText, maxLen = 140) {
+            if (!chunkText || chunkText.length <= maxLen) return [chunkText];
+            const parts = chunkText.split(/([,;:\u0964\u0965]+)/g);
+            const chunks = [];
+            let current = '';
+
+            for (let i = 0; i < parts.length; i++) {
+                const part = parts[i];
+                if ((current + part).length > maxLen && current.trim().length > 0) {
+                    chunks.push(current.trim());
+                    current = part;
+                } else {
+                    current += part;
+                }
+            }
+            if (current.trim().length > 0) {
+                chunks.push(current.trim());
+            }
+            return chunks.length > 0 ? chunks : [chunkText];
+        }
+
+        // Split text array into sentence-sized chunks
+        function splitTextIntoChunks(paragraphs) {
+            const chunks = [];
+            paragraphs.forEach(para => {
+                if (!para || typeof para !== 'string') return;
+                const sentences = para.split(/([.!?\n\u0964]+)/g);
+                let acc = '';
+
+                for (let i = 0; i < sentences.length; i++) {
+                    const token = sentences[i];
+                    if (!token) continue;
+                    if (/^[.!?\n\u0964]+$/.test(token)) {
+                        acc += token;
+                        const trimmed = acc.trim();
+                        if (trimmed.length > 0) {
+                            chunks.push(...subdivideChunk(trimmed));
+                        }
+                        acc = '';
+                    } else {
+                        acc += token;
+                    }
+                }
+                if (acc.trim().length > 0) {
+                    chunks.push(...subdivideChunk(acc.trim()));
+                }
+            });
+
+            return chunks.filter(c => c && c.trim().length > 0);
+        }
+
+        // Start playing the speech queue
+        function handleSpeechPlay(forcedLang = null) {
+            if (!('speechSynthesis' in window)) return;
+            if (!scanData) return;
+
+            // Reset existing playback
+            handleSpeechStop();
+
+            const activeLang = forcedLang || scanData.language || getCurrentLanguage();
+            const paragraphs = buildSpeechText(scanData, activeLang);
+            speechQueue = splitTextIntoChunks(paragraphs);
+
+            if (speechQueue.length === 0) return;
+
+            speechQueueIndex = 0;
+            isSpeaking = true;
+            isPaused = false;
+
+            // Activate visible speaking UI
+            const btnListen = document.getElementById('btn-speech-listen');
+            const activeBar = document.getElementById('speech-active-bar');
+            if (btnListen) btnListen.style.display = 'none';
+            if (activeBar) activeBar.style.display = 'inline-flex';
+
+            updatePauseResumeState(false);
+            playNextQueueChunk();
+        }
+
+        // Play next chunk in speech queue
+        function playNextQueueChunk() {
+            if (!isSpeaking || isPaused) return;
+
+            if (speechQueueIndex >= speechQueue.length) {
+                // Completed all chunks
+                handleSpeechStop();
+                return;
+            }
+
+            const textChunk = speechQueue[speechQueueIndex];
+            const utterance = new SpeechSynthesisUtterance(textChunk);
+
+            if (currentVoice) {
+                utterance.voice = currentVoice;
+                utterance.lang = currentVoice.lang || targetSpeechLocale;
+            } else if (targetSpeechLocale) {
+                utterance.lang = targetSpeechLocale;
+            }
+
+            utterance.rate = 0.95;
+
+            utterance.onend = () => {
+                if (!isSpeaking || isPaused) return;
+                speechQueueIndex++;
+                playNextQueueChunk();
+            };
+
+            utterance.onerror = (event) => {
+                if (event.error === 'canceled' || event.error === 'interrupted') return;
+                console.warn('Speech synthesis error on chunk:', event);
+                if (isSpeaking && !isPaused) {
+                    speechQueueIndex++;
+                    playNextQueueChunk();
+                }
+            };
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // Pause or Resume current narration
+        function handleSpeechPauseResume() {
+            if (!isSpeaking) return;
+
+            if (!isPaused) {
+                // Pause narration
+                isPaused = true;
+                window.speechSynthesis.pause();
+                updatePauseResumeState(true);
+            } else {
+                // Resume narration
+                isPaused = false;
+                window.speechSynthesis.resume();
+                // Safeguard against Chrome freeze on resume
+                if (!window.speechSynthesis.speaking) {
+                    playNextQueueChunk();
+                }
+                updatePauseResumeState(false);
+            }
+        }
+
+        // Stop narration, clear queue, and restore UI
+        function handleSpeechStop() {
+            isSpeaking = false;
+            isPaused = false;
+            speechQueue = [];
+            speechQueueIndex = 0;
+
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+
+            // Restore idle state UI
+            const btnListen = document.getElementById('btn-speech-listen');
+            const activeBar = document.getElementById('speech-active-bar');
+            if (btnListen) btnListen.style.display = 'inline-flex';
+            if (activeBar) activeBar.style.display = 'none';
+
+            updatePauseResumeState(false);
+        }
+
+        // Update Pause/Resume toggle button and soundwave animation
+        function updatePauseResumeState(paused) {
+            const pauseBtn = document.getElementById('btn-speech-pause');
+            const pauseLabel = document.getElementById('speech-pause-label');
+            const iconEl = document.getElementById('icon-pause-resume');
+            const soundwaves = document.getElementById('speech-soundwaves');
+            const activeLang = (scanData && scanData.language) ? scanData.language : getCurrentLanguage();
+
+            if (!pauseBtn || !iconEl) return;
+
+            if (paused) {
+                iconEl.innerHTML = `<polygon points="5 3 19 12 5 21 5 3"></polygon>`;
+                if (pauseLabel) {
+                    pauseLabel.textContent = (typeof t === 'function' ? t('speech_resume', activeLang) : '') || 'Resume';
+                }
+                pauseBtn.setAttribute('aria-label', 'Resume narration');
+                pauseBtn.setAttribute('title', 'Resume');
+                if (soundwaves) soundwaves.classList.add('paused');
+            } else {
+                iconEl.innerHTML = `<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>`;
+                if (pauseLabel) {
+                    pauseLabel.textContent = (typeof t === 'function' ? t('speech_pause', activeLang) : '') || 'Pause';
+                }
+                pauseBtn.setAttribute('aria-label', 'Pause narration');
+                pauseBtn.setAttribute('title', 'Pause');
+                if (soundwaves) soundwaves.classList.remove('paused');
+            }
+        }
+
+        // Stop speech on page leave
+        window.addEventListener('beforeunload', handleSpeechStop);
+        window.addEventListener('pagehide', handleSpeechStop);
     </script>
 
 </body>
