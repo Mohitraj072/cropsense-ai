@@ -65,6 +65,30 @@
                         </select>
                     </div>
                 </div>
+
+                <!-- Retake Guidance Warning Banner (shown when needs_retake is true) -->
+                <div class="retake-banner" id="retake-banner" style="display: none;">
+                    <div class="retake-banner-content">
+                        <div class="retake-banner-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                            </svg>
+                        </div>
+                        <div class="retake-banner-text">
+                            <strong id="retake-banner-title" data-i18n="retake_title">Retake Recommended</strong>
+                            <p id="retake-banner-tip">Loading retake guidance...</p>
+                        </div>
+                    </div>
+                    <a href="/analyze" class="btn-warning-outline" id="btn-retake-photo">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                            <circle cx="12" cy="13" r="4"></circle>
+                        </svg>
+                        <span data-i18n="btn_retake_photo">Retake Photo</span>
+                    </a>
+                </div>
                 
                 <div class="result-grid">
                     <!-- Left: Uploaded leaf image preview -->
@@ -91,6 +115,17 @@
                             <span class="result-info-label" data-i18n="report_severity">Severity Level</span>
                             <div style="margin-top: 4px;">
                                 <span class="badge" id="report-severity-badge">Checking...</span>
+                            </div>
+                        </div>
+
+                        <!-- Confidence Score Bar -->
+                        <div class="result-info-group">
+                            <div class="confidence-header">
+                                <span class="result-info-label" data-i18n="report_confidence">AI Confidence</span>
+                                <span class="confidence-value" id="report-confidence-val">--%</span>
+                            </div>
+                            <div class="confidence-track">
+                                <div class="confidence-bar" id="report-confidence-bar" style="width: 0%;"></div>
                             </div>
                         </div>
 
@@ -189,7 +224,8 @@
                 scanData.translations[currentLang] = {
                     disease_name: scanData.disease_name,
                     cause: scanData.cause,
-                    treatment: scanData.treatment
+                    treatment: scanData.treatment,
+                    retake_tip: scanData.retake_tip
                 };
 
                 renderScanDetails(scanData);
@@ -235,6 +271,48 @@
                 badge.classList.add('badge-na');
                 badge.textContent = tSeverity('healthy', activeLang);
             }
+
+            // Confidence score bar (green >= 80, amber 60-79, red < 60)
+            const confVal = (typeof data.confidence === 'number') ? data.confidence : 75;
+            const confValEl = document.getElementById('report-confidence-val');
+            const confBarEl = document.getElementById('report-confidence-bar');
+            if (confValEl && confBarEl) {
+                confValEl.textContent = `${confVal}%`;
+                confBarEl.style.width = `${confVal}%`;
+                confBarEl.className = 'confidence-bar';
+                if (confVal >= 80) {
+                    confBarEl.classList.add('confidence-high');
+                    confValEl.className = 'confidence-value conf-color-high';
+                } else if (confVal >= 60) {
+                    confBarEl.classList.add('confidence-med');
+                    confValEl.className = 'confidence-value conf-color-med';
+                } else {
+                    confBarEl.classList.add('confidence-low');
+                    confValEl.className = 'confidence-value conf-color-low';
+                }
+            }
+
+            // Retake guidance warning banner
+            const retakeBanner = document.getElementById('retake-banner');
+            const retakeTip = document.getElementById('retake-banner-tip');
+            if (retakeBanner && retakeTip) {
+                if (data.needs_retake) {
+                    retakeBanner.style.display = 'flex';
+                    retakeTip.textContent = data.retake_tip || t('default_retake_tip', activeLang);
+                } else {
+                    retakeBanner.style.display = 'none';
+                }
+            }
+
+            // Hide Save button if image_quality is "not_a_leaf"
+            const btnSave = document.getElementById('btn-save');
+            if (btnSave) {
+                if (data.image_quality === 'not_a_leaf') {
+                    btnSave.style.display = 'none';
+                } else {
+                    btnSave.style.display = 'inline-flex';
+                }
+            }
         }
 
         // Language change handler calling /translate
@@ -250,6 +328,7 @@
                 scanData.disease_name = cached.disease_name;
                 scanData.cause = cached.cause;
                 scanData.treatment = cached.treatment;
+                scanData.retake_tip = cached.retake_tip || scanData.retake_tip;
                 scanData.language = newLang;
                 setLanguage(newLang);
                 localStorage.setItem('scanResult', JSON.stringify(scanData));
@@ -273,7 +352,8 @@
                         fields: {
                             disease_name: scanData.disease_name_en || scanData.disease_name,
                             cause: scanData.cause,
-                            treatment: scanData.treatment
+                            treatment: scanData.treatment,
+                            retake_tip: scanData.retake_tip
                         }
                     })
                 });
@@ -291,6 +371,7 @@
                 scanData.disease_name = translated.disease_name || scanData.disease_name;
                 scanData.cause = translated.cause || scanData.cause;
                 scanData.treatment = translated.treatment || scanData.treatment;
+                scanData.retake_tip = translated.retake_tip || scanData.retake_tip;
                 scanData.language = newLang;
 
                 setLanguage(newLang);
@@ -326,7 +407,8 @@
                 const payload = {
                     ...scanData,
                     language: scanData.language || getCurrentLanguage(),
-                    disease_name_en: scanData.disease_name_en || scanData.disease_name
+                    disease_name_en: scanData.disease_name_en || scanData.disease_name,
+                    confidence: scanData.confidence !== undefined ? scanData.confidence : null
                 };
 
                 const response = await fetch('/save', {
