@@ -250,8 +250,9 @@
                             <th data-i18n="th_crop">Crop Name</th>
                             <th data-i18n="th_disease">Disease Name</th>
                             <th data-i18n="th_severity">Severity</th>
-                            <th data-i18n="th_treatment">Treatment</th>
-                            <th data-i18n="th_action">Action</th>
+                            <th data-i18n="th_status">Status</th>
+                            <th data-i18n="th_notes">Notes</th>
+                            <th data-i18n="th_action">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="history-tbody">
@@ -878,40 +879,189 @@
                 severityCell.appendChild(badge);
                 row.appendChild(severityCell);
 
-                // Treatment cell (truncated to 60 characters)
-                const treatmentCell = document.createElement('td');
-                treatmentCell.className = 'treatment-cell';
-                const treatmentText = scan.treatment || 'No treatment required.';
-                treatmentCell.textContent = truncateString(treatmentText, 60);
-                treatmentCell.title = treatmentText; // Tooltip with full description
-                row.appendChild(treatmentCell);
+                // Status dropdown cell with inline saved confirmation
+                const statusCell = document.createElement('td');
+                statusCell.className = 'status-cell';
+                const currentStatus = (scan.status || 'untreated').toLowerCase().trim();
 
-                // Action cell with Report link
+                const statusWrapper = document.createElement('div');
+                statusWrapper.className = 'status-cell-wrapper';
+
+                const statusSelect = document.createElement('select');
+                statusSelect.className = `select-scan-status status-${currentStatus}`;
+                statusSelect.id = `status-select-${scan.id}`;
+                statusSelect.setAttribute('aria-label', 'Update scan treatment status');
+
+                const optUntreated = document.createElement('option');
+                optUntreated.value = 'untreated';
+                optUntreated.textContent = (typeof I18N_DICTIONARY !== 'undefined' && I18N_DICTIONARY[activeLang]?.status_untreated) || 'Untreated';
+                if (currentStatus === 'untreated') optUntreated.selected = true;
+
+                const optTreating = document.createElement('option');
+                optTreating.value = 'treating';
+                optTreating.textContent = (typeof I18N_DICTIONARY !== 'undefined' && I18N_DICTIONARY[activeLang]?.status_treating) || 'Treating';
+                if (currentStatus === 'treating') optTreating.selected = true;
+
+                const optRecovered = document.createElement('option');
+                optRecovered.value = 'recovered';
+                optRecovered.textContent = (typeof I18N_DICTIONARY !== 'undefined' && I18N_DICTIONARY[activeLang]?.status_recovered) || 'Recovered';
+                if (currentStatus === 'recovered') optRecovered.selected = true;
+
+                statusSelect.appendChild(optUntreated);
+                statusSelect.appendChild(optTreating);
+                statusSelect.appendChild(optRecovered);
+
+                statusSelect.addEventListener('change', () => {
+                    handleStatusChange(scan.id, statusSelect.value);
+                });
+
+                const savedPill = document.createElement('span');
+                savedPill.className = 'status-saved-pill';
+                savedPill.id = `saved-pill-${scan.id}`;
+                savedPill.textContent = '✓ ' + ((typeof I18N_DICTIONARY !== 'undefined' && I18N_DICTIONARY[activeLang]?.saved_confirm) || 'Saved');
+
+                statusWrapper.appendChild(statusSelect);
+                statusWrapper.appendChild(savedPill);
+                statusCell.appendChild(statusWrapper);
+                row.appendChild(statusCell);
+
+                // Notes input cell
+                const notesCell = document.createElement('td');
+                notesCell.className = 'notes-cell';
+
+                const notesInput = document.createElement('input');
+                notesInput.type = 'text';
+                notesInput.className = 'input-scan-notes';
+                notesInput.id = `notes-input-${scan.id}`;
+                notesInput.placeholder = (activeLang === 'hi' ? 'टिप्पणी जोड़ें...' : 'Add notes...');
+                notesInput.value = scan.notes || '';
+                notesInput.setAttribute('aria-label', 'Scan treatment notes');
+
+                notesInput.addEventListener('blur', () => {
+                    handleNotesBlur(scan.id, notesInput.value);
+                });
+                notesInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        notesInput.blur();
+                    }
+                });
+
+                notesCell.appendChild(notesInput);
+                row.appendChild(notesCell);
+
+                // Action cell with Report and Re-scan buttons
                 const actionCell = document.createElement('td');
                 actionCell.className = 'action-cell';
+
+                const actionsWrapper = document.createElement('div');
+                actionsWrapper.className = 'actions-cell-wrapper';
+
                 if (scan.id) {
+                    // 1. Report link
                     const reportLink = document.createElement('a');
                     reportLink.href = `/report/${scan.id}`;
                     reportLink.className = 'btn-report-link';
                     reportLink.setAttribute('target', '_blank');
                     const reportText = (typeof I18N_DICTIONARY !== 'undefined' && I18N_DICTIONARY[activeLang]?.btn_view_report) || 'Report';
                     reportLink.innerHTML = `
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                             <polyline points="14 2 14 8 20 8"></polyline>
-                            <line x1="16" y1="13" x2="8" y2="13"></line>
-                            <line x1="16" y1="17" x2="8" y2="17"></line>
                         </svg>
                         <span>${reportText}</span>
                     `;
-                    actionCell.appendChild(reportLink);
+                    actionsWrapper.appendChild(reportLink);
+
+                    // 2. Re-scan button
+                    const rescanLink = document.createElement('a');
+                    rescanLink.href = `/analyze?follow_up_of=${scan.id}`;
+                    rescanLink.className = 'btn-rescan-link';
+                    rescanLink.title = 'Start a follow-up diagnosis for this crop scan';
+                    const rescanText = (typeof I18N_DICTIONARY !== 'undefined' && I18N_DICTIONARY[activeLang]?.btn_rescan) || 'Re-scan';
+                    rescanLink.innerHTML = `
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                        <span>${rescanText}</span>
+                    `;
+                    actionsWrapper.appendChild(rescanLink);
                 } else {
-                    actionCell.textContent = '-';
+                    actionsWrapper.textContent = '-';
                 }
+                actionCell.appendChild(actionsWrapper);
                 row.appendChild(actionCell);
 
                 tbody.appendChild(row);
             });
+        }
+
+        // Inline Scan Status & Notes Update Handlers
+        async function updateScanStatusInline(scanId, newStatus, notesValue) {
+            const savedPill = document.getElementById(`saved-pill-${scanId}`);
+            try {
+                const response = await fetch(`/scans/${scanId}/status`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        status: newStatus,
+                        notes: notesValue !== undefined ? notesValue : ''
+                    })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || 'Failed to update scan.');
+                }
+
+                const resData = await response.json();
+
+                // Update in local memory
+                const scanObj = allScans.find(s => s.id === scanId);
+                if (scanObj) {
+                    scanObj.status = newStatus;
+                    if (notesValue !== undefined) scanObj.notes = notesValue;
+                    if (resData.data && resData.data.treated_at) {
+                        scanObj.treated_at = resData.data.treated_at;
+                    }
+                }
+
+                // Update select CSS class for color coding
+                const selectEl = document.getElementById(`status-select-${scanId}`);
+                if (selectEl) {
+                    selectEl.className = `select-scan-status status-${newStatus}`;
+                }
+
+                // Flash the small "Saved" confirmation pill
+                if (savedPill) {
+                    savedPill.classList.add('show');
+                    setTimeout(() => {
+                        savedPill.classList.remove('show');
+                    }, 2000);
+                }
+            } catch (error) {
+                console.error('Failed to update scan status:', error);
+                alert(`Could not save update: ${error.message}`);
+            }
+        }
+
+        function handleStatusChange(scanId, newStatus) {
+            const notesInput = document.getElementById(`notes-input-${scanId}`);
+            const currentNotes = notesInput ? notesInput.value : '';
+            updateScanStatusInline(scanId, newStatus, currentNotes);
+        }
+
+        function handleNotesBlur(scanId, newNotes) {
+            const selectEl = document.getElementById(`status-select-${scanId}`);
+            const currentStatus = selectEl ? selectEl.value : 'untreated';
+            const scanObj = allScans.find(s => s.id === scanId);
+            if (scanObj && (scanObj.notes || '').trim() === newNotes.trim()) {
+                return; // Value didn't change
+            }
+            updateScanStatusInline(scanId, currentStatus, newNotes);
         }
 
         // Date helper format

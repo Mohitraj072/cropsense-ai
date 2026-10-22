@@ -2240,6 +2240,128 @@ body {
     color: #ffffff;
 }
 
+/* ── Status & Notes inline tracker styling ── */
+.status-cell-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+}
+
+.select-scan-status {
+    padding: 5px 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    outline: none;
+    border: 1px solid var(--border-color);
+}
+
+.select-scan-status.status-untreated {
+    background-color: #f5f5f5;
+    border-color: #cfd8dc;
+    color: #455a64;
+}
+
+.select-scan-status.status-treating {
+    background-color: #fff8e1;
+    border-color: #ffe082;
+    color: #b78103;
+}
+
+.select-scan-status.status-recovered {
+    background-color: #e8f5e9;
+    border-color: #a5d6a7;
+    color: #2e7d32;
+}
+
+.select-scan-status:focus {
+    box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.status-saved-pill {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #2e7d32;
+    background: #e8f5e9;
+    padding: 2px 7px;
+    border-radius: 99px;
+    opacity: 0;
+    transform: scale(0.85);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+}
+
+.status-saved-pill.show {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.notes-cell {
+    min-width: 150px;
+}
+
+.input-scan-notes {
+    width: 100%;
+    padding: 5px 9px;
+    font-size: 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background-color: #ffffff;
+    color: var(--text-primary);
+    transition: var(--transition);
+}
+
+.input-scan-notes:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-glow);
+    background-color: #ffffff;
+}
+
+.actions-cell-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+}
+
+.btn-rescan-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    background: rgba(2, 136, 209, 0.08);
+    color: #0288d1;
+    border: 1px solid rgba(2, 136, 209, 0.25);
+    border-radius: var(--radius-sm);
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.btn-rescan-link svg {
+    color: #0288d1;
+    transition: var(--transition);
+}
+
+.btn-rescan-link:hover {
+    background: #0288d1;
+    color: #ffffff;
+    border-color: #0288d1;
+    box-shadow: 0 2px 8px rgba(2, 136, 209, 0.35);
+}
+
+.btn-rescan-link:hover svg {
+    color: #ffffff;
+}
+
 /* ── Report Page Styles (Screen) ── */
 .report-page-body {
     background-color: #f1f5f2;
