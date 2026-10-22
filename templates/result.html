@@ -228,6 +228,96 @@
                                     <span data-i18n="safety_kvk">Consult local Krishi Vigyan Kendra</span>
                                 </div>
                             </div>
+                        <!-- Weather Advice Section -->
+                        <div class="weather-advice-section" id="weather-section">
+                            <!-- Weather Trigger / Prompt State -->
+                            <div class="weather-prompt-box" id="weather-prompt-box">
+                                <div class="weather-prompt-header">
+                                    <div class="weather-icon-badge">
+                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="weather-prompt-info">
+                                        <h4 class="weather-prompt-title" data-i18n="weather_section_title">Weather-Aware Treatment Advice</h4>
+                                        <p class="weather-prompt-sub" data-i18n="weather_prompt_sub">Check local rainfall, wind, and humidity to avoid pesticide drift and fungal outbreaks.</p>
+                                    </div>
+                                </div>
+
+                                <div class="weather-prompt-actions">
+                                    <button type="button" class="btn btn-weather-primary" id="btn-get-weather" onclick="requestWeatherByGeolocation()">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+                                        </svg>
+                                        <span data-i18n="btn_add_weather">Add Weather Advice</span>
+                                    </button>
+
+                                    <div class="weather-city-fallback" id="weather-city-fallback">
+                                        <input type="text" id="weather-city-input" class="input-weather-city" placeholder="Or enter city name (e.g. Pune)..." aria-label="City name">
+                                        <button type="button" class="btn btn-weather-city" id="btn-city-search" onclick="searchWeatherByCity()" data-i18n="btn_check_weather">Check Weather</button>
+                                    </div>
+                                </div>
+
+                                <div class="weather-status-msg" id="weather-status-msg" style="display: none;"></div>
+                            </div>
+
+                            <!-- Weather Card (Rendered when weather is loaded) -->
+                            <div class="weather-card" id="weather-card" style="display: none;">
+                                <div class="weather-card-header">
+                                    <div class="weather-card-title-group">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+                                            <circle cx="12" cy="10" r="3"></circle>
+                                        </svg>
+                                        <span class="weather-location-name" id="weather-location-name">Local Weather</span>
+                                    </div>
+                                    <button type="button" class="btn-weather-refresh" id="btn-weather-refresh" onclick="refreshWeather()" title="Refresh weather">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="23 4 23 10 17 10"></polyline>
+                                            <polyline points="1 20 1 14 7 14"></polyline>
+                                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+
+                                <!-- Weather Metrics Grid -->
+                                <div class="weather-metrics-grid">
+                                    <div class="weather-metric-item">
+                                        <span class="weather-metric-icon">🌡️</span>
+                                        <div class="weather-metric-info">
+                                            <span class="weather-metric-val" id="weather-temp">--°C</span>
+                                            <span class="weather-metric-lbl">Temperature</span>
+                                        </div>
+                                    </div>
+                                    <div class="weather-metric-item">
+                                        <span class="weather-metric-icon">💧</span>
+                                        <div class="weather-metric-info">
+                                            <span class="weather-metric-val" id="weather-humidity">--%</span>
+                                            <span class="weather-metric-lbl">Humidity</span>
+                                        </div>
+                                    </div>
+                                    <div class="weather-metric-item">
+                                        <span class="weather-metric-icon">💨</span>
+                                        <div class="weather-metric-info">
+                                            <span class="weather-metric-val" id="weather-wind">-- km/h</span>
+                                            <span class="weather-metric-lbl">Wind Speed</span>
+                                        </div>
+                                    </div>
+                                    <div class="weather-metric-item">
+                                        <span class="weather-metric-icon">🌧️</span>
+                                        <div class="weather-metric-info">
+                                            <span class="weather-metric-val" id="weather-rain">-- mm</span>
+                                            <span class="weather-metric-lbl">Rain (48h)</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Advice List Container -->
+                                <div class="weather-advice-list" id="weather-advice-list">
+                                    <!-- Populated dynamically -->
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -610,6 +700,204 @@
             }
         }
 
+        let activeCoordinates = null;
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function setWeatherLoading(isLoading, msg) {
+            const statusMsg = document.getElementById('weather-status-msg');
+            const btnGet = document.getElementById('btn-get-weather');
+            const btnCity = document.getElementById('btn-city-search');
+            if (!statusMsg) return;
+
+            if (isLoading) {
+                statusMsg.style.display = 'block';
+                statusMsg.className = 'weather-status-msg info';
+                const activeLang = getCurrentLanguage();
+                statusMsg.textContent = msg || ((typeof I18N_DICTIONARY !== 'undefined' && I18N_DICTIONARY[activeLang]?.weather_detecting) || 'Detecting local weather forecast...');
+                if (btnGet) btnGet.disabled = true;
+                if (btnCity) btnCity.disabled = true;
+            } else {
+                if (btnGet) btnGet.disabled = false;
+                if (btnCity) btnCity.disabled = false;
+            }
+        }
+
+        function showWeatherCityFallback(infoText) {
+            const statusMsg = document.getElementById('weather-status-msg');
+            if (statusMsg) {
+                statusMsg.style.display = 'block';
+                statusMsg.className = 'weather-status-msg warn';
+                statusMsg.textContent = infoText || 'Please enter your city to retrieve weather advice:';
+            }
+            const cityInput = document.getElementById('weather-city-input');
+            if (cityInput) cityInput.focus();
+        }
+
+        function showWeatherError(errText) {
+            const statusMsg = document.getElementById('weather-status-msg');
+            if (statusMsg) {
+                statusMsg.style.display = 'block';
+                statusMsg.className = 'weather-status-msg error';
+                statusMsg.innerHTML = `
+                    <span>${escapeHtml(errText || 'Failed to retrieve weather.')}</span>
+                    <button type="button" class="btn-weather-retry" onclick="requestWeatherByGeolocation()">Retry</button>
+                `;
+            }
+        }
+
+        function requestWeatherByGeolocation() {
+            if (!navigator.geolocation) {
+                showWeatherCityFallback("Geolocation is not supported by your browser. Please enter your city.");
+                return;
+            }
+
+            setWeatherLoading(true);
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    activeCoordinates = { lat, lon, title: "Detected Location" };
+                    await fetchWeather(lat, lon, "Detected Location");
+                },
+                (error) => {
+                    console.warn("Geolocation denied or failed:", error);
+                    setWeatherLoading(false);
+                    showWeatherCityFallback("Location permission denied or unavailable. Please enter your city below:");
+                },
+                { timeout: 10000, enableHighAccuracy: false }
+            );
+        }
+
+        async function searchWeatherByCity() {
+            const input = document.getElementById('weather-city-input');
+            const city = (input ? input.value : '').trim();
+            if (!city) {
+                showWeatherCityFallback("Please enter a city name.");
+                return;
+            }
+
+            setWeatherLoading(true, "Searching city coordinates...");
+            try {
+                const geoResp = await fetch(`/geocode?city=${encodeURIComponent(city)}`);
+                const geoData = await geoResp.json();
+                if (!geoResp.ok) {
+                    throw new Error(geoData.error || "City not found.");
+                }
+                const locationTitle = `${geoData.city}${geoData.admin1 ? ', ' + geoData.admin1 : ''}`;
+                activeCoordinates = { lat: geoData.lat, lon: geoData.lon, title: locationTitle };
+                await fetchWeather(geoData.lat, geoData.lon, locationTitle);
+            } catch (err) {
+                setWeatherLoading(false);
+                showWeatherError(err.message);
+            }
+        }
+
+        function refreshWeather() {
+            if (activeCoordinates) {
+                fetchWeather(activeCoordinates.lat, activeCoordinates.lon, activeCoordinates.title);
+            } else {
+                requestWeatherByGeolocation();
+            }
+        }
+
+        async function fetchWeather(lat, lon, locationTitle) {
+            setWeatherLoading(true);
+            try {
+                const resp = await fetch(`/weather?lat=${lat}&lon=${lon}`);
+                const data = await resp.json();
+                if (!resp.ok) {
+                    throw new Error(data.error || "Failed to fetch weather forecast.");
+                }
+                renderWeatherCard(data, locationTitle);
+            } catch (err) {
+                showWeatherError(err.message);
+            } finally {
+                setWeatherLoading(false);
+            }
+        }
+
+        function renderWeatherCard(data, locationTitle) {
+            const promptBox = document.getElementById('weather-prompt-box');
+            const weatherCard = document.getElementById('weather-card');
+            const locName = document.getElementById('weather-location-name');
+            const tempEl = document.getElementById('weather-temp');
+            const humEl = document.getElementById('weather-humidity');
+            const windEl = document.getElementById('weather-wind');
+            const rainEl = document.getElementById('weather-rain');
+            const adviceList = document.getElementById('weather-advice-list');
+
+            if (!weatherCard) return;
+
+            if (promptBox) promptBox.style.display = 'none';
+            weatherCard.style.display = 'block';
+
+            if (locName) locName.textContent = locationTitle || 'Local Weather';
+            if (tempEl) tempEl.textContent = (data.temperature !== null && data.temperature !== undefined) ? `${Math.round(data.temperature)}°C` : '--°C';
+            if (humEl) humEl.textContent = (data.humidity !== null && data.humidity !== undefined) ? `${Math.round(data.humidity)}%` : '--%';
+            if (windEl) windEl.textContent = (data.wind_speed !== null && data.wind_speed !== undefined) ? `${data.wind_speed} km/h` : '-- km/h';
+
+            const rain3d = data.rain_3d || [];
+            const rain48h = (rain3d.length > 0 ? (rain3d[0] || 0) + (rain3d[1] || 0) : 0);
+            if (rainEl) rainEl.textContent = `${rain48h.toFixed(1)} mm`;
+
+            // Render advice list
+            if (adviceList) {
+                adviceList.innerHTML = '';
+                const activeLang = getCurrentLanguage();
+                const codes = data.advice_codes || [];
+
+                codes.forEach(code => {
+                    const item = document.createElement('div');
+                    let levelClass = 'level-info';
+                    let iconEmoji = 'ℹ️';
+
+                    if (code === 'high_fungal_risk') {
+                        levelClass = 'level-danger';
+                        iconEmoji = '⚠️';
+                    } else if (code === 'delay_spraying' || code === 'avoid_spraying_wind' || code === 'spray_morning_evening') {
+                        levelClass = 'level-warning';
+                        iconEmoji = '⚠️';
+                    } else if (code === 'ideal_spraying_conditions') {
+                        levelClass = 'level-success';
+                        iconEmoji = '✅';
+                    }
+
+                    item.className = `weather-advice-item ${levelClass}`;
+
+                    const text = (typeof I18N_DICTIONARY !== 'undefined' && I18N_DICTIONARY[activeLang]?.[`advice_${code}`]) ||
+                        (typeof I18N_DICTIONARY !== 'undefined' && I18N_DICTIONARY['en']?.[`advice_${code}`]) ||
+                        code;
+
+                    item.innerHTML = `
+                        <span class="weather-advice-emoji">${iconEmoji}</span>
+                        <div class="weather-advice-text">${escapeHtml(text)}</div>
+                    `;
+                    adviceList.appendChild(item);
+                });
+            }
+
+            // Save in local state and localStorage for persistence and /save
+            if (scanData) {
+                const activeLang = getCurrentLanguage();
+                const translatedAdvices = (data.advice_codes || []).map(code => {
+                    return (typeof I18N_DICTIONARY !== 'undefined' && I18N_DICTIONARY[activeLang]?.[`advice_${code}`]) ||
+                        (typeof I18N_DICTIONARY !== 'undefined' && I18N_DICTIONARY['en']?.[`advice_${code}`]) ||
+                        code;
+                });
+                scanData.weather_advice = translatedAdvices.join(' | ') || data.advice_summary || '';
+                localStorage.setItem('scanResult', JSON.stringify(scanData));
+            }
+        }
+
         // Save scan to database dashboard
         async function saveScanToDashboard() {
             if (!scanData) {
@@ -635,7 +923,8 @@
                     organic_options: scanData.organic_options || [],
                     chemical_options: scanData.chemical_options || [],
                     prevention_tips: scanData.prevention_tips || [],
-                    safety_note: scanData.safety_note || ''
+                    safety_note: scanData.safety_note || '',
+                    weather_advice: scanData.weather_advice || ''
                 };
 
                 const response = await fetch('/save', {

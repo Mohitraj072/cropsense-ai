@@ -264,6 +264,21 @@
                 </div>
             </section>
 
+            {% if scan.weather_advice %}
+            <!-- Weather Advice Section -->
+            <section class="report-section report-weather-section">
+                <h2 class="report-section-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>
+                    </svg>
+                    <span>Weather & Spraying Conditions</span>
+                </h2>
+                <div class="report-info-block">
+                    <p class="report-body-text">{{ scan.weather_advice }}</p>
+                </div>
+            </section>
+            {% endif %}
+
             <!-- Report Document Footer & Mandatory Disclaimer -->
             <footer class="report-doc-footer">
                 <div class="report-disclaimer-box">
