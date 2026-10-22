@@ -65,7 +65,7 @@ def analyze_crop_image(image_bytes, mime_type, language="en"):
     lang_name = SUPPORTED_LANGUAGES.get(language, "English")
     prompt = (
         f"Analyze this crop leaf image and identify any disease present.\n\n"
-        f"Provide the analysis in {lang_name} ({language}) for disease_name, cause, and treatment.\n"
+        f"Provide the analysis in {lang_name} ({language}) for disease_name, cause, treatment, and retake_tip.\n"
         f"Return STRICTLY a JSON object with these exact keys:\n"
         '{\n'
         '  "crop_name": "name of the crop (e.g. Tomato, Rice, Wheat)",\n'
@@ -73,9 +73,14 @@ def analyze_crop_image(image_bytes, mime_type, language="en"):
         '  "disease_name_en": "disease name in English or Healthy if none",\n'
         '  "severity": "mild | moderate | severe | N/A",\n'
         f'  "cause": "pathogen/cause in {lang_name} or N/A if healthy",\n'
-        f'  "treatment": "recommended treatment in {lang_name} or N/A if healthy"\n'
+        f'  "treatment": "recommended treatment in {lang_name} or N/A if healthy",\n'
+        '  "confidence": integer 0-100 representing diagnostic confidence percentage,\n'
+        '  "image_quality": "good | blurry | too_dark | not_a_leaf | multiple_leaves",\n'
+        f'  "retake_tip": "one short sentence in {lang_name} with photography guidance if quality is not good or confidence is low, or advice to maintain crop health if good"\n'
         '}\n\n'
         'Note: "severity" MUST be one of: "mild", "moderate", "severe", "N/A" (exact English enum).\n'
+        '"image_quality" MUST be one of: "good", "blurry", "too_dark", "not_a_leaf", "multiple_leaves" (exact English enum).\n'
+        '"confidence" MUST be an integer between 0 and 100.\n'
         '"disease_name_en" MUST be in English.\n'
         "Output ONLY raw JSON. No markdown, no code fences, no extra text."
     )
@@ -285,6 +290,30 @@ def detect():
         if analysis_result.get("disease_name_en") in [None, "", "Unknown"]:
             analysis_result["disease_name_en"] = analysis_result.get("disease_name", "Unknown")
 
+        # Parse and sanitize confidence (integer 0-100)
+        raw_conf = analysis_result.get("confidence")
+        try:
+            confidence = int(raw_conf)
+            confidence = max(0, min(100, confidence))
+        except (TypeError, ValueError):
+            confidence = 75
+        analysis_result["confidence"] = confidence
+
+        # Parse and sanitize image_quality (good | blurry | too_dark | not_a_leaf | multiple_leaves)
+        valid_qualities = {"good", "blurry", "too_dark", "not_a_leaf", "multiple_leaves"}
+        img_quality = str(analysis_result.get("image_quality", "good")).strip().lower()
+        if img_quality not in valid_qualities:
+            img_quality = "good"
+        analysis_result["image_quality"] = img_quality
+
+        # Parse retake_tip
+        retake_tip = str(analysis_result.get("retake_tip") or "").strip()
+        analysis_result["retake_tip"] = retake_tip
+
+        # needs_retake boolean: true if image_quality != "good" or confidence < 60
+        needs_retake = (img_quality != "good") or (confidence < 60)
+        analysis_result["needs_retake"] = needs_retake
+
         file_ext = image_file.filename.rsplit(".", 1)[-1] if "." in image_file.filename else "jpg"
         unique_filename = "scan_" + uuid.uuid4().hex + "." + file_ext
         image_url = upload_image_to_supabase(image_bytes, unique_filename, mime_type)
@@ -330,7 +359,8 @@ def translate():
         '{\n'
         f'  "disease_name": "translated disease name in {target_lang_name} or Healthy if healthy",\n'
         f'  "cause": "translated pathogen/cause in {target_lang_name} or N/A",\n'
-        f'  "treatment": "translated treatment in {target_lang_name} or N/A"\n'
+        f'  "treatment": "translated treatment in {target_lang_name} or N/A",\n'
+        f'  "retake_tip": "translated retake guidance in {target_lang_name} or empty string"\n'
         '}\n\n'
         f"Fields to translate:\n"
         f"{json.dumps(fields, ensure_ascii=False)}\n\n"
@@ -371,7 +401,8 @@ def translate():
         return jsonify({
             "disease_name": translated.get("disease_name", fields.get("disease_name", "")),
             "cause": translated.get("cause", fields.get("cause", "")),
-            "treatment": translated.get("treatment", fields.get("treatment", ""))
+            "treatment": translated.get("treatment", fields.get("treatment", "")),
+            "retake_tip": translated.get("retake_tip", fields.get("retake_tip", ""))
         })
     except Exception as e:
         traceback.print_exc()
@@ -409,6 +440,12 @@ def save():
         if not data.get(field):
             return jsonify({"error": "Missing required field: " + field}), 400
     try:
+        raw_conf = data.get("confidence")
+        try:
+            confidence = int(raw_conf) if raw_conf is not None else None
+        except (TypeError, ValueError):
+            confidence = None
+
         insert_data = {
             "user_id": session.get("user_id"),
             "crop_name": data.get("crop_name"),
@@ -418,12 +455,18 @@ def save():
             "treatment": data.get("treatment"),
             "image_url": data.get("image_url", ""),
             "language": data.get("language", "en"),
-            "disease_name_en": data.get("disease_name_en") or data.get("disease_name")
+            "disease_name_en": data.get("disease_name_en") or data.get("disease_name"),
+            "confidence": confidence
         }
         response = supabase.table("scans").insert(insert_data).execute()
         return jsonify({"success": True, "data": response.data[0] if response.data else insert_data})
     except Exception as e:
         return jsonify({"error": "Failed to save scan: " + str(e)}), 500
+
+
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    return jsonify({"error": "Image is larger than 5 MB. Please choose a smaller photo."}), 413
 
 
 if __name__ == "__main__":
