@@ -57,6 +57,16 @@
 
                 <!-- Form Section -->
                 <form id="upload-form" class="upload-form" onsubmit="handleAnalyzeSubmit(event)">
+                    <!-- Friendly Inline Validation / Error Message -->
+                    <div id="upload-feedback-msg" class="inline-feedback-msg" role="alert" style="display: none;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        <span id="upload-feedback-text"></span>
+                    </div>
+
                     <!-- Drag & Drop upload container -->
                     <div class="form-group">
                         <label class="form-label" data-i18n="upload_label">Upload Leaf Image</label>
@@ -68,7 +78,7 @@
                             </svg>
                             <p id="upload-box-text" data-i18n="upload_box_text">Click or drag a leaf photo here</p>
                             <span data-i18n="upload_supports">Supports JPEG, PNG, WEBP</span>
-                            <input type="file" id="image-input" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
+                            <input type="file" id="image-input" accept="image/jpeg,image/png,image/webp" style="display: none;" onchange="handleFileSelect(event)">
                         </div>
 
                         <!-- Image Preview -->
@@ -151,6 +161,59 @@
     <!-- Inline Script logic for Drag and Drop, Preview, API upload, and Loading -->
     <script>
         let selectedFile = null;
+        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+        const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+        const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
+
+        // Show friendly inline message
+        function showInlineError(message) {
+            const errorBox = document.getElementById('upload-feedback-msg');
+            const errorText = document.getElementById('upload-feedback-text');
+            if (errorBox && errorText) {
+                errorText.textContent = message;
+                errorBox.style.display = 'flex';
+                errorBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        // Clear inline message
+        function clearInlineError() {
+            const errorBox = document.getElementById('upload-feedback-msg');
+            const errorText = document.getElementById('upload-feedback-text');
+            if (errorBox && errorText) {
+                errorText.textContent = '';
+                errorBox.style.display = 'none';
+            }
+        }
+
+        // Validate file format and size
+        function validateFile(file) {
+            if (!file) {
+                return { valid: false, error: 'Please select a crop leaf photo.' };
+            }
+
+            const fileName = (file.name || '').toLowerCase();
+            const fileType = (file.type || '').toLowerCase();
+
+            const hasValidExt = ALLOWED_EXTENSIONS.some(ext => fileName.endsWith(ext));
+            const hasValidMime = ALLOWED_MIME_TYPES.includes(fileType);
+
+            if (!hasValidMime && !hasValidExt) {
+                return {
+                    valid: false,
+                    error: 'Please upload a valid JPEG, PNG, or WebP photo.'
+                };
+            }
+
+            if (file.size > MAX_FILE_SIZE) {
+                return {
+                    valid: false,
+                    error: 'Image is larger than 5 MB. Please choose a smaller photo.'
+                };
+            }
+
+            return { valid: true };
+        }
 
         // Trigger file input click
         function triggerFileSelect() {
@@ -165,12 +228,18 @@
             }
         }
 
-        // Preview file helper
+        // Preview file helper with validation
         function setUploadedFile(file) {
-            if (!file.type.startsWith('image/')) {
-                alert('Please select an image file.');
+            clearInlineError();
+
+            const validation = validateFile(file);
+            if (!validation.valid) {
+                showInlineError(validation.error);
+                selectedFile = null;
+                document.getElementById('image-input').value = '';
                 return;
             }
+
             selectedFile = file;
             
             // Set image preview source
@@ -190,7 +259,7 @@
         // Clear preview
         function clearPreview(event) {
             event.stopPropagation(); // Stop click propagating to dropZone
-            
+            clearInlineError();
             selectedFile = null;
             document.getElementById('image-input').value = '';
             document.getElementById('preview-image').src = '';
@@ -235,20 +304,38 @@
             if (langSelect) {
                 langSelect.value = getCurrentLanguage();
             }
+
+            const cropSelect = document.getElementById('crop-type');
+            if (cropSelect) {
+                cropSelect.addEventListener('change', () => {
+                    const errorBox = document.getElementById('upload-feedback-msg');
+                    const errorText = document.getElementById('upload-feedback-text');
+                    if (errorBox && errorText && errorText.textContent.includes('crop type')) {
+                        clearInlineError();
+                    }
+                });
+            }
         });
 
         // Submit form and request detection
         async function handleAnalyzeSubmit(event) {
             event.preventDefault();
+            clearInlineError();
 
             if (!selectedFile) {
-                alert('Please select or drop a crop leaf image before starting the analysis.');
+                showInlineError('Please select or capture a crop leaf photo before starting analysis.');
+                return;
+            }
+
+            const validation = validateFile(selectedFile);
+            if (!validation.valid) {
+                showInlineError(validation.error);
                 return;
             }
 
             const cropType = document.getElementById('crop-type').value;
             if (!cropType) {
-                alert('Please select a crop type.');
+                showInlineError('Please select a crop type.');
                 return;
             }
 
@@ -272,8 +359,16 @@
                 });
 
                 if (!response.ok) {
-                    const errData = await response.json();
-                    throw new Error(errData.error || 'Server responded with an error.');
+                    let errMsg = 'Server responded with an error.';
+                    try {
+                        const errData = await response.json();
+                        if (errData && errData.error) {
+                            errMsg = errData.error;
+                        }
+                    } catch (_) {
+                        errMsg = `Server error (${response.status}).`;
+                    }
+                    throw new Error(errMsg);
                 }
 
                 const data = await response.json();
@@ -285,12 +380,14 @@
                 window.location.href = '/result';
             } catch (error) {
                 console.error('Analysis error:', error);
-                alert(`Analysis failed: ${error.message}`);
                 
                 // Revert to form view
                 document.getElementById('heading-block').style.display = 'block';
                 document.getElementById('upload-form').style.display = 'flex';
                 document.getElementById('loading-container').style.display = 'none';
+
+                // Show friendly inline message
+                showInlineError(error.message || 'Analysis failed. Please try again.');
             }
         }
     </script>
