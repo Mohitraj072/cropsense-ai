@@ -631,12 +631,79 @@ def save():
         return jsonify({"error": "Failed to save scan: " + str(e)}), 500
 
 
+def evaluate_weather_rules(temperature, humidity, wind_speed, rain_3d):
+    """
+    Evaluates rule-based agricultural spraying and disease risk advice.
+    No AI quota consumed.
+    Rules:
+      1. Rain within 48h (sum >= 1.0mm) -> delay_spraying
+      2. Wind > 15 km/h -> avoid_spraying_wind
+      3. Humidity > 80% and 20 <= Temp <= 30 C -> high_fungal_risk
+      4. Temperature > 35 C -> spray_morning_evening
+      5. Otherwise -> ideal_spraying_conditions
+    """
+    items = []
+    codes = []
+
+    # 1. Rain check within 48 hours (first 2 forecast days: today and tomorrow)
+    rain_48h = 0.0
+    if isinstance(rain_3d, list) and len(rain_3d) > 0:
+        rain_48h = sum(float(r or 0.0) for r in rain_3d[:2])
+
+    if rain_48h >= 1.0:
+        codes.append("delay_spraying")
+        items.append({
+            "code": "delay_spraying",
+            "level": "warning",
+            "default_text": "Rain expected within 48h. Delay spraying to prevent pesticide runoff and wastage."
+        })
+
+    # 2. Wind check (> 15 km/h causes chemical drift)
+    if wind_speed is not None and float(wind_speed) > 15.0:
+        codes.append("avoid_spraying_wind")
+        items.append({
+            "code": "avoid_spraying_wind",
+            "level": "warning",
+            "default_text": "Wind speed exceeds 15 km/h. Avoid spraying to prevent chemical drift to non-target areas."
+        })
+
+    # 3. High fungal risk condition (Humidity > 80% and 20-30 C)
+    if (humidity is not None and float(humidity) > 80.0) and (temperature is not None and 20.0 <= float(temperature) <= 30.0):
+        codes.append("high_fungal_risk")
+        items.append({
+            "code": "high_fungal_risk",
+            "level": "danger",
+            "default_text": "High humidity (>80%) and warm temperature (20-30°C) favor rapid fungal spore propagation."
+        })
+
+    # 4. High heat condition (> 35 C rapid evaporation & leaf stress)
+    if temperature is not None and float(temperature) > 35.0:
+        codes.append("spray_morning_evening")
+        items.append({
+            "code": "spray_morning_evening",
+            "level": "warning",
+            "default_text": "High temperature (>35°C). Spray in early morning or evening to avoid rapid evaporation and scorch."
+        })
+
+    # 5. Ideal conditions fallback
+    if not codes:
+        codes.append("ideal_spraying_conditions")
+        items.append({
+            "code": "ideal_spraying_conditions",
+            "level": "success",
+            "default_text": "Weather conditions are currently calm and favorable for spraying treatments."
+        })
+
+    summary_text = " ".join(it["default_text"] for it in items)
+    return codes, items, summary_text
+
+
 @app.route("/weather", methods=["GET"])
 @login_required
 def get_weather():
     """
     Fetch weather summary from Open-Meteo API using latitude and longitude.
-    Validates coordinate ranges and returns a compact weather summary.
+    Validates coordinate ranges, computes rule-based spraying advice, and returns a compact summary.
     """
     raw_lat = request.args.get("lat")
     raw_lon = request.args.get("lon")
@@ -685,6 +752,8 @@ def get_weather():
     if not isinstance(rain_3d, list):
         rain_3d = []
 
+    advice_codes, advice_items, advice_summary = evaluate_weather_rules(temp, humidity, wind, rain_3d)
+
     return jsonify({
         "success": True,
         "latitude": lat,
@@ -692,7 +761,10 @@ def get_weather():
         "temperature": temp,
         "humidity": humidity,
         "wind_speed": wind,
-        "rain_3d": rain_3d
+        "rain_3d": rain_3d,
+        "advice_codes": advice_codes,
+        "advice_items": advice_items,
+        "advice_summary": advice_summary
     })
 
 
