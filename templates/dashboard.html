@@ -837,6 +837,32 @@
 
             const activeLang = getCurrentLanguage();
 
+            // Build lookup maps for follow-up progression and parent scans
+            const scanMap = new Map();
+            const followUpsByParentId = new Map();
+
+            allScans.forEach(s => {
+                if (s.id) {
+                    scanMap.set(Number(s.id), s);
+                    if (s.follow_up_of) {
+                        const pId = Number(s.follow_up_of);
+                        if (!followUpsByParentId.has(pId)) {
+                            followUpsByParentId.set(pId, []);
+                        }
+                        followUpsByParentId.get(pId).push(s);
+                    }
+                }
+            });
+
+            // Sort follow-up lists chronologically
+            followUpsByParentId.forEach(list => {
+                list.sort((a, b) => {
+                    const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+                    const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+                    return (timeA || a.id || 0) - (timeB || b.id || 0);
+                });
+            });
+
             scans.forEach(scan => {
                 const row = document.createElement('tr');
 
@@ -857,8 +883,13 @@
                 diseaseCell.textContent = scan.disease_name || 'Healthy';
                 row.appendChild(diseaseCell);
 
-                // Severity badge cell
+                // Severity badge cell with follow-up improvement comparison
                 const severityCell = document.createElement('td');
+                severityCell.className = 'severity-cell';
+
+                const severityWrapper = document.createElement('div');
+                severityWrapper.className = 'severity-cell-wrapper';
+
                 const badge = document.createElement('span');
                 badge.className = 'badge';
                 
@@ -876,7 +907,29 @@
                     badge.classList.add('badge-na');
                     badge.textContent = tSeverity('healthy', activeLang);
                 }
-                severityCell.appendChild(badge);
+                severityWrapper.appendChild(badge);
+
+                // Show improvement comparison if scan has follow-up or is a follow-up
+                let fromSev = null;
+                let toSev = null;
+
+                if (followUpsByParentId.has(Number(scan.id))) {
+                    const followUps = followUpsByParentId.get(Number(scan.id));
+                    const latestFollowUp = followUps[followUps.length - 1];
+                    fromSev = scan.severity;
+                    toSev = latestFollowUp.severity;
+                } else if (scan.follow_up_of && scanMap.has(Number(scan.follow_up_of))) {
+                    const parentScan = scanMap.get(Number(scan.follow_up_of));
+                    fromSev = parentScan.severity;
+                    toSev = scan.severity;
+                }
+
+                if (fromSev && toSev) {
+                    const compBadge = createComparisonBadge(fromSev, toSev);
+                    severityWrapper.appendChild(compBadge);
+                }
+
+                severityCell.appendChild(severityWrapper);
                 row.appendChild(severityCell);
 
                 // Status dropdown cell with inline saved confirmation
@@ -1062,6 +1115,55 @@
                 return; // Value didn't change
             }
             updateScanStatusInline(scanId, currentStatus, newNotes);
+        }
+
+        // Severity ranking & comparison helpers
+        function getSeverityRank(sev) {
+            const s = (sev || '').toLowerCase().trim();
+            if (s === 'severe') return 3;
+            if (s === 'moderate') return 2;
+            if (s === 'mild') return 1;
+            return 0; // healthy, n/a, etc.
+        }
+
+        function formatSeverityName(sev) {
+            const s = (sev || '').toLowerCase().trim();
+            if (s === 'severe') return 'Severe';
+            if (s === 'moderate') return 'Moderate';
+            if (s === 'mild') return 'Mild';
+            return 'Healthy';
+        }
+
+        function createComparisonBadge(fromSev, toSev) {
+            const fromRank = getSeverityRank(fromSev);
+            const toRank = getSeverityRank(toSev);
+            const fromName = formatSeverityName(fromSev);
+            const toName = formatSeverityName(toSev);
+
+            let statusType = 'unchanged';
+            let outcomeText = 'unchanged';
+
+            if (fromRank > toRank) {
+                statusType = 'improved';
+                outcomeText = 'improved';
+            } else if (fromRank < toRank) {
+                statusType = 'worse';
+                outcomeText = 'worse';
+            } else {
+                statusType = 'unchanged';
+                outcomeText = 'unchanged';
+            }
+
+            const badgeDiv = document.createElement('div');
+            badgeDiv.className = `comparison-badge comparison-${statusType}`;
+            badgeDiv.setAttribute('title', `Severity progression: ${fromName} -> ${toName} (${outcomeText})`);
+
+            const textSpan = document.createElement('span');
+            textSpan.className = 'comparison-text';
+            textSpan.textContent = `${fromName} -> ${toName} (${outcomeText})`;
+
+            badgeDiv.appendChild(textSpan);
+            return badgeDiv;
         }
 
         // Date helper format
