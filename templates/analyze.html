@@ -373,6 +373,16 @@
 
                 const data = await response.json();
                 
+                // Attach follow_up_of if this scan is a re-scan follow up
+                const urlParams = new URLSearchParams(window.location.search);
+                const followUpOf = urlParams.get('follow_up_of');
+                if (followUpOf) {
+                    const parsedId = parseInt(followUpOf, 10);
+                    if (!isNaN(parsedId)) {
+                        data.follow_up_of = parsedId;
+                    }
+                }
+
                 // Store results in localStorage
                 localStorage.setItem('scanResult', JSON.stringify(data));
                 

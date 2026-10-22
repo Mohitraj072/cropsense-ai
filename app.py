@@ -3,6 +3,7 @@ import traceback
 import uuid
 import base64
 import json
+from datetime import datetime, timezone
 import requests
 from functools import wraps
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, abort
@@ -516,6 +517,41 @@ def report(scan_id):
         return jsonify({"error": "Failed to retrieve report: " + str(e)}), 500
 
 
+@app.route("/scans/<int:scan_id>/status", methods=["PATCH"])
+@login_required
+def update_scan_status(scan_id):
+    if not supabase:
+        return jsonify({"error": "Supabase not configured."}), 500
+    user_id = session.get("user_id")
+    data = request.get_json(silent=True) or request.form or {}
+    status = data.get("status")
+    notes = data.get("notes")
+
+    if not status or status not in {"untreated", "treating", "recovered"}:
+        return jsonify({"error": "Invalid status. Must be 'untreated', 'treating', or 'recovered'."}), 400
+
+    update_payload = {"status": status}
+    if notes is not None:
+        update_payload["notes"] = str(notes).strip()
+    if status == "treating":
+        update_payload["treated_at"] = datetime.now(timezone.utc).isoformat()
+
+    try:
+        response = (
+            supabase.table("scans")
+            .update(update_payload)
+            .eq("id", scan_id)
+            .eq("user_id", user_id)
+            .execute()
+        )
+        if not response.data or len(response.data) == 0:
+            return jsonify({"error": "Scan not found or unauthorized."}), 404
+        return jsonify({"success": True, "data": response.data[0]})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": "Failed to update scan status: " + str(e)}), 500
+
+
 @app.route("/save", methods=["POST"])
 @login_required
 def save():
@@ -533,6 +569,12 @@ def save():
             confidence = int(raw_conf) if raw_conf is not None else None
         except (TypeError, ValueError):
             confidence = None
+
+        raw_follow_up = data.get("follow_up_of")
+        try:
+            follow_up_of = int(raw_follow_up) if raw_follow_up is not None and str(raw_follow_up).strip() not in ("", "null", "None") else None
+        except (TypeError, ValueError):
+            follow_up_of = None
 
         def parse_json_list(val):
             if isinstance(val, list):
@@ -566,13 +608,18 @@ def save():
             "organic_options": organic_options,
             "chemical_options": chemical_options,
             "prevention_tips": prevention_tips,
-            "safety_note": safety_note
+            "safety_note": safety_note,
+            "follow_up_of": follow_up_of
         }
         try:
             response = supabase.table("scans").insert(insert_data).execute()
         except Exception as insert_err:
-            if any(col in str(insert_err).lower() for col in ["organic_options", "chemical_options", "prevention_tips", "safety_note"]):
-                legacy_data = {k: v for k, v in insert_data.items() if k not in ["organic_options", "chemical_options", "prevention_tips", "safety_note"]}
+            err_lower = str(insert_err).lower()
+            if any(col in err_lower for col in ["follow_up_of", "organic_options", "chemical_options", "prevention_tips", "safety_note"]):
+                legacy_data = {
+                    k: v for k, v in insert_data.items()
+                    if k not in ["follow_up_of", "organic_options", "chemical_options", "prevention_tips", "safety_note"]
+                }
                 response = supabase.table("scans").insert(legacy_data).execute()
             else:
                 raise insert_err

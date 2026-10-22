@@ -628,6 +628,7 @@
             try {
                 const payload = {
                     ...scanData,
+                    follow_up_of: scanData.follow_up_of !== undefined ? scanData.follow_up_of : null,
                     language: scanData.language || getCurrentLanguage(),
                     disease_name_en: scanData.disease_name_en || scanData.disease_name,
                     confidence: scanData.confidence !== undefined ? scanData.confidence : null,
