@@ -2202,6 +2202,44 @@ body {
     box-shadow: 0 4px 12px var(--accent-glow);
 }
 
+/* ── Dashboard Table Action & Report Link ── */
+.action-cell {
+    text-align: center;
+    white-space: nowrap;
+}
+
+.btn-report-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: rgba(46, 125, 50, 0.08);
+    color: var(--accent);
+    border: 1px solid rgba(46, 125, 50, 0.25);
+    border-radius: var(--radius-sm);
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.btn-report-link svg {
+    color: var(--accent);
+    transition: var(--transition);
+}
+
+.btn-report-link:hover {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+.btn-report-link:hover svg {
+    color: #ffffff;
+}
+
 /* ── Report Page Styles (Screen) ── */
 .report-page-body {
     background-color: #f1f5f2;

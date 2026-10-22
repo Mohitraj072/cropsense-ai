@@ -251,6 +251,7 @@
                             <th data-i18n="th_disease">Disease Name</th>
                             <th data-i18n="th_severity">Severity</th>
                             <th data-i18n="th_treatment">Treatment</th>
+                            <th data-i18n="th_action">Action</th>
                         </tr>
                     </thead>
                     <tbody id="history-tbody">
@@ -884,6 +885,30 @@
                 treatmentCell.textContent = truncateString(treatmentText, 60);
                 treatmentCell.title = treatmentText; // Tooltip with full description
                 row.appendChild(treatmentCell);
+
+                // Action cell with Report link
+                const actionCell = document.createElement('td');
+                actionCell.className = 'action-cell';
+                if (scan.id) {
+                    const reportLink = document.createElement('a');
+                    reportLink.href = `/report/${scan.id}`;
+                    reportLink.className = 'btn-report-link';
+                    reportLink.setAttribute('target', '_blank');
+                    const reportText = (typeof I18N_DICTIONARY !== 'undefined' && I18N_DICTIONARY[activeLang]?.btn_view_report) || 'Report';
+                    reportLink.innerHTML = `
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                        </svg>
+                        <span>${reportText}</span>
+                    `;
+                    actionCell.appendChild(reportLink);
+                } else {
+                    actionCell.textContent = '-';
+                }
+                row.appendChild(actionCell);
 
                 tbody.appendChild(row);
             });
