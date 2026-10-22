@@ -42,3 +42,11 @@ alter table public.scans add column if not exists organic_options jsonb default 
 alter table public.scans add column if not exists chemical_options jsonb default '[]'::jsonb;
 alter table public.scans add column if not exists prevention_tips jsonb default '[]'::jsonb;
 alter table public.scans add column if not exists safety_note text;
+
+-- Treatment tracker with re-scan comparison
+alter table public.scans add column if not exists status text not null default 'untreated';
+alter table public.scans add column if not exists treated_at timestamptz;
+alter table public.scans add column if not exists notes text;
+alter table public.scans add column if not exists follow_up_of bigint references public.scans(id) on delete set null;
+create policy "Allow anon updates" on public.scans for update to anon using (true) with check (true);
+
