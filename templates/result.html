@@ -135,11 +135,98 @@
                             <p class="result-info-value" id="report-cause">Loading...</p>
                         </div>
 
-                        <!-- Treatment Recommendation -->
-                        <div class="result-info-group">
+                        <!-- Treatment Tabs (Organic vs Chemical) -->
+                        <div class="result-info-group" id="treatment-section">
                             <span class="result-info-label" data-i18n="report_treatment">Recommended Treatment</span>
-                            <div class="treatment-box">
-                                <p id="report-treatment">Loading...</p>
+                            
+                            <!-- Healthy Plant Notice (shown if plant is healthy) -->
+                            <div class="treatment-healthy-box" id="treatment-healthy-box" style="display: none;">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                </svg>
+                                <div>
+                                    <strong data-i18n="no_treatment_needed">No treatment needed</strong>
+                                    <p data-i18n="healthy_plant_desc">Your plant displays healthy foliage with no active disease detected.</p>
+                                </div>
+                            </div>
+
+                            <!-- Treatment Tabs Navigation & Content -->
+                            <div class="treatment-tabs-wrapper" id="treatment-tabs-wrapper">
+                                <div class="treatment-nav-tabs" role="tablist" aria-label="Treatment options">
+                                    <button type="button" class="treatment-tab-btn active" id="tab-btn-organic" role="tab" aria-selected="true" aria-controls="tab-pane-organic" onclick="switchTreatmentTab('organic')">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 3.58 1 9.2a7.07 7.07 0 0 1-7.6 8.8Z" />
+                                            <path d="M19 2c-2.26 4.33-5.27 7.14-8 10" />
+                                        </svg>
+                                        <span data-i18n="tab_organic">Organic</span>
+                                    </button>
+                                    <button type="button" class="treatment-tab-btn" id="tab-btn-chemical" role="tab" aria-selected="false" aria-controls="tab-pane-chemical" onclick="switchTreatmentTab('chemical')">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M10 2v7.31M14 9.3V1.99M8.5 2h7M14 9.3a6.5 6.5 0 1 1-4 0"></path>
+                                            <circle cx="12" cy="15" r="1"></circle>
+                                        </svg>
+                                        <span data-i18n="tab_chemical">Chemical</span>
+                                    </button>
+                                </div>
+
+                                <!-- Tab Content Panes -->
+                                <div class="treatment-tab-panes">
+                                    <!-- Organic Tab Pane -->
+                                    <div class="treatment-tab-pane active" id="tab-pane-organic" role="tabpanel" aria-labelledby="tab-btn-organic">
+                                        <ul class="treatment-options-list list-organic" id="organic-options-list">
+                                            <!-- Rendered dynamically -->
+                                        </ul>
+                                    </div>
+
+                                    <!-- Chemical Tab Pane -->
+                                    <div class="treatment-tab-pane" id="tab-pane-chemical" role="tabpanel" aria-labelledby="tab-btn-chemical">
+                                        <ul class="treatment-options-list list-chemical" id="chemical-options-list">
+                                            <!-- Rendered dynamically -->
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Prevention Section -->
+                        <div class="result-info-group" id="prevention-section">
+                            <span class="result-info-label" data-i18n="section_prevention">Prevention Tips</span>
+                            <div class="prevention-card">
+                                <ul class="prevention-list" id="prevention-tips-list">
+                                    <!-- Rendered dynamically -->
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Safety Note Card -->
+                        <div class="safety-note-card" id="safety-note-card">
+                            <div class="safety-card-header">
+                                <div class="safety-badge-icon">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                    </svg>
+                                </div>
+                                <span class="safety-title-text" data-i18n="safety_note_title">Safety Precautions</span>
+                            </div>
+                            <p class="safety-text" id="report-safety-note"></p>
+                            <div class="safety-guidelines-grid">
+                                <div class="safety-guideline-item">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                                    <span data-i18n="safety_gloves_mask">Wear gloves & protective mask</span>
+                                </div>
+                                <div class="safety-guideline-item">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                                    <span data-i18n="safety_label">Follow product label directions</span>
+                                </div>
+                                <div class="safety-guideline-item">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                                    <span data-i18n="safety_children_water">Keep away from children & water bodies</span>
+                                </div>
+                                <div class="safety-guideline-item">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                                    <span data-i18n="safety_kvk">Consult local Krishi Vigyan Kendra</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -198,6 +285,59 @@
     <script>
         let scanData = null;
 
+        const leafIconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 3.58 1 9.2a7.07 7.07 0 0 1-7.6 8.8Z" /><path d="M19 2c-2.26 4.33-5.27 7.14-8 10" /></svg>`;
+        const beakerIconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2v7.31M14 9.3V1.99M8.5 2h7M14 9.3a6.5 6.5 0 1 1-4 0"></path><circle cx="12" cy="15" r="1"></circle></svg>`;
+        const shieldIconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg>`;
+
+        function switchTreatmentTab(tabName) {
+            const btnOrganic = document.getElementById('tab-btn-organic');
+            const btnChemical = document.getElementById('tab-btn-chemical');
+            const paneOrganic = document.getElementById('tab-pane-organic');
+            const paneChemical = document.getElementById('tab-pane-chemical');
+
+            if (!btnOrganic || !btnChemical || !paneOrganic || !paneChemical) return;
+
+            if (tabName === 'chemical') {
+                btnChemical.classList.add('active');
+                btnChemical.setAttribute('aria-selected', 'true');
+                btnOrganic.classList.remove('active');
+                btnOrganic.setAttribute('aria-selected', 'false');
+
+                paneChemical.classList.add('active');
+                paneOrganic.classList.remove('active');
+            } else {
+                btnOrganic.classList.add('active');
+                btnOrganic.setAttribute('aria-selected', 'true');
+                btnChemical.classList.remove('active');
+                btnChemical.setAttribute('aria-selected', 'false');
+
+                paneOrganic.classList.add('active');
+                paneChemical.classList.remove('active');
+            }
+        }
+
+        function renderBulletList(containerId, items, iconSvg, emptyFallbackText) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = '';
+
+            const list = Array.isArray(items) ? items.filter(i => String(i).trim().length > 0) : [];
+            if (list.length === 0) {
+                if (emptyFallbackText) {
+                    const li = document.createElement('li');
+                    li.innerHTML = `${iconSvg}<span>${emptyFallbackText}</span>`;
+                    container.appendChild(li);
+                }
+                return;
+            }
+
+            list.forEach(item => {
+                const li = document.createElement('li');
+                li.innerHTML = `${iconSvg}<span>${item}</span>`;
+                container.appendChild(li);
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             // Load and parse scan results from localStorage
             const localData = localStorage.getItem('scanResult');
@@ -225,7 +365,11 @@
                     disease_name: scanData.disease_name,
                     cause: scanData.cause,
                     treatment: scanData.treatment,
-                    retake_tip: scanData.retake_tip
+                    organic_options: scanData.organic_options || [],
+                    chemical_options: scanData.chemical_options || [],
+                    prevention_tips: scanData.prevention_tips || [],
+                    safety_note: scanData.safety_note || '',
+                    retake_tip: scanData.retake_tip || ''
                 };
 
                 renderScanDetails(scanData);
@@ -250,7 +394,6 @@
             document.getElementById('report-crop-name').textContent = data.crop_name || 'N/A';
             document.getElementById('report-disease-name').textContent = data.disease_name || t('severity_healthy');
             document.getElementById('report-cause').textContent = data.cause || 'No disease patterns detected.';
-            document.getElementById('report-treatment').textContent = data.treatment || 'No treatment required.';
 
             // Render severity badge
             const badge = document.getElementById('report-severity-badge');
@@ -304,6 +447,52 @@
                 }
             }
 
+            // Determine if plant is healthy
+            const diseaseName = (data.disease_name || '').toLowerCase();
+            const diseaseNameEn = (data.disease_name_en || '').toLowerCase();
+            const isHealthy = severity === 'n/a' || diseaseName.includes('healthy') || diseaseNameEn.includes('healthy') ||
+                ((!data.organic_options || data.organic_options.length === 0) &&
+                 (!data.chemical_options || data.chemical_options.length === 0) &&
+                 (data.treatment === 'N/A' || data.treatment === 'Healthy' || (data.treatment || '').toLowerCase().includes('no treatment')));
+
+            const healthyBox = document.getElementById('treatment-healthy-box');
+            const tabsWrapper = document.getElementById('treatment-tabs-wrapper');
+            const safetyCard = document.getElementById('safety-note-card');
+
+            if (isHealthy) {
+                if (healthyBox) healthyBox.style.display = 'flex';
+                if (tabsWrapper) tabsWrapper.style.display = 'none';
+                if (safetyCard) safetyCard.style.display = 'none';
+            } else {
+                if (healthyBox) healthyBox.style.display = 'none';
+                if (tabsWrapper) tabsWrapper.style.display = 'block';
+                if (safetyCard) safetyCard.style.display = 'block';
+
+                // Render organic options
+                const organicItems = (Array.isArray(data.organic_options) && data.organic_options.length > 0)
+                    ? data.organic_options
+                    : (data.treatment && data.treatment !== 'N/A' ? [data.treatment] : []);
+                renderBulletList('organic-options-list', organicItems, leafIconSvg, 'No organic treatment specified.');
+
+                // Render chemical options
+                const chemicalItems = (Array.isArray(data.chemical_options) && data.chemical_options.length > 0)
+                    ? data.chemical_options
+                    : (data.treatment && data.treatment !== 'N/A' ? [data.treatment] : []);
+                renderBulletList('chemical-options-list', chemicalItems, beakerIconSvg, 'No chemical treatment specified.');
+
+                // Render safety note
+                const safetyNoteEl = document.getElementById('report-safety-note');
+                if (safetyNoteEl) {
+                    safetyNoteEl.textContent = data.safety_note || `${t('safety_kvk', activeLang)}. ${t('safety_label', activeLang)}.`;
+                }
+            }
+
+            // Render prevention tips (always visible for healthy and diseased plants)
+            const preventionItems = (Array.isArray(data.prevention_tips) && data.prevention_tips.length > 0)
+                ? data.prevention_tips
+                : ['Practice crop rotation with non-host crops each season.', 'Use certified disease-free seeds and resistant varieties.', 'Maintain optimal spacing and drip irrigation to avoid leaf wetness.'];
+            renderBulletList('prevention-tips-list', preventionItems, shieldIconSvg, 'Follow good agricultural and field hygiene practices.');
+
             // Hide Save button if image_quality is "not_a_leaf"
             const btnSave = document.getElementById('btn-save');
             if (btnSave) {
@@ -325,9 +514,13 @@
             // If we have cached translations for this language, use them directly
             if (scanData.translations && scanData.translations[newLang]) {
                 const cached = scanData.translations[newLang];
-                scanData.disease_name = cached.disease_name;
-                scanData.cause = cached.cause;
-                scanData.treatment = cached.treatment;
+                scanData.disease_name = cached.disease_name || scanData.disease_name;
+                scanData.cause = cached.cause || scanData.cause;
+                scanData.treatment = cached.treatment || scanData.treatment;
+                scanData.organic_options = cached.organic_options || scanData.organic_options;
+                scanData.chemical_options = cached.chemical_options || scanData.chemical_options;
+                scanData.prevention_tips = cached.prevention_tips || scanData.prevention_tips;
+                scanData.safety_note = cached.safety_note || scanData.safety_note;
                 scanData.retake_tip = cached.retake_tip || scanData.retake_tip;
                 scanData.language = newLang;
                 setLanguage(newLang);
@@ -353,7 +546,11 @@
                             disease_name: scanData.disease_name_en || scanData.disease_name,
                             cause: scanData.cause,
                             treatment: scanData.treatment,
-                            retake_tip: scanData.retake_tip
+                            organic_options: scanData.organic_options || [],
+                            chemical_options: scanData.chemical_options || [],
+                            prevention_tips: scanData.prevention_tips || [],
+                            safety_note: scanData.safety_note || '',
+                            retake_tip: scanData.retake_tip || ''
                         }
                     })
                 });
@@ -371,6 +568,10 @@
                 scanData.disease_name = translated.disease_name || scanData.disease_name;
                 scanData.cause = translated.cause || scanData.cause;
                 scanData.treatment = translated.treatment || scanData.treatment;
+                scanData.organic_options = translated.organic_options || scanData.organic_options;
+                scanData.chemical_options = translated.chemical_options || scanData.chemical_options;
+                scanData.prevention_tips = translated.prevention_tips || scanData.prevention_tips;
+                scanData.safety_note = translated.safety_note || scanData.safety_note;
                 scanData.retake_tip = translated.retake_tip || scanData.retake_tip;
                 scanData.language = newLang;
 
@@ -408,7 +609,11 @@
                     ...scanData,
                     language: scanData.language || getCurrentLanguage(),
                     disease_name_en: scanData.disease_name_en || scanData.disease_name,
-                    confidence: scanData.confidence !== undefined ? scanData.confidence : null
+                    confidence: scanData.confidence !== undefined ? scanData.confidence : null,
+                    organic_options: scanData.organic_options || [],
+                    chemical_options: scanData.chemical_options || [],
+                    prevention_tips: scanData.prevention_tips || [],
+                    safety_note: scanData.safety_note || ''
                 };
 
                 const response = await fetch('/save', {

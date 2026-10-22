@@ -1768,4 +1768,228 @@ body {
     stroke: #c62828;
 }
 
+/* ── Treatment Tabs (Organic vs Chemical) ── */
+.treatment-tabs-wrapper {
+    margin-top: 6px;
+}
+
+.treatment-nav-tabs {
+    display: flex;
+    gap: 10px;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 0;
+    margin-bottom: 14px;
+}
+
+.treatment-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: var(--transition);
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.treatment-tab-btn:hover {
+    color: var(--primary);
+    background-color: rgba(46, 125, 50, 0.05);
+}
+
+.treatment-tab-btn.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+    background-color: rgba(46, 125, 50, 0.08);
+}
+
+.treatment-tab-btn svg {
+    flex-shrink: 0;
+    stroke: currentColor;
+}
+
+.treatment-tab-pane {
+    display: none;
+    animation: fadeInDown 0.3s ease;
+}
+
+.treatment-tab-pane.active {
+    display: block;
+}
+
+.treatment-options-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.treatment-options-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.list-organic li {
+    background-color: rgba(46, 125, 50, 0.06);
+    border-left: 4px solid #2e7d32;
+    color: #1b5e20;
+}
+
+.list-chemical li {
+    background-color: rgba(2, 119, 189, 0.06);
+    border-left: 4px solid #0288d1;
+    color: #01579b;
+}
+
+.treatment-options-list li svg {
+    flex-shrink: 0;
+    margin-top: 3px;
+}
+
+/* ── Healthy Plant Notice ── */
+.treatment-healthy-box {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    background-color: rgba(46, 125, 50, 0.08);
+    border: 1px solid rgba(46, 125, 50, 0.25);
+    border-radius: var(--radius-sm);
+    color: #1b5e20;
+    margin-top: 6px;
+    animation: fadeInDown 0.3s ease;
+}
+
+.treatment-healthy-box svg {
+    flex-shrink: 0;
+    color: #2e7d32;
+}
+
+.treatment-healthy-box strong {
+    display: block;
+    font-size: 1.05rem;
+    color: #1b5e20;
+    margin-bottom: 2px;
+}
+
+.treatment-healthy-box p {
+    font-size: 0.9rem;
+    color: #2e7d32;
+    margin: 0;
+}
+
+/* ── Prevention Section ── */
+.prevention-card {
+    background: #fdfdfd;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 14px 18px;
+    margin-top: 6px;
+}
+
+.prevention-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.prevention-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.93rem;
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+.prevention-list li svg {
+    flex-shrink: 0;
+    color: #2e7d32;
+    margin-top: 3px;
+}
+
+/* ── Visible Safety Note Card ── */
+.safety-note-card {
+    background: #fffdf5;
+    border: 1px solid #ffe082;
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    margin-top: 20px;
+    animation: fadeInDown 0.3s ease;
+}
+
+.safety-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.safety-badge-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #ffe082;
+    color: #b78103;
+    flex-shrink: 0;
+}
+
+.safety-title-text {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #b78103;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.safety-text {
+    font-size: 0.92rem;
+    color: #5d4037;
+    margin-bottom: 12px;
+    line-height: 1.5;
+    font-weight: 500;
+}
+
+.safety-guidelines-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 8px;
+}
+
+.safety-guideline-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #ffffff;
+    border: 1px solid rgba(255, 224, 130, 0.7);
+    border-radius: var(--radius-sm);
+    font-size: 0.84rem;
+    font-weight: 500;
+    color: #6d4c41;
+}
+
+.safety-guideline-item svg {
+    flex-shrink: 0;
+    stroke: #e65100;
+}
+
 
