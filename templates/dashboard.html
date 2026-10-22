@@ -245,9 +245,284 @@
 
     <!-- JavaScript Data Loading Logic -->
     <script>
+        let chartDiseases = null;
+        let chartTrend = null;
+        let chartSeverity = null;
+        let chartCrops = null;
+
+        // Apply CropSense green theme defaults to Chart.js
+        if (typeof Chart !== 'undefined') {
+            Chart.defaults.font.family = "'Outfit', 'Inter', 'Noto Sans', sans-serif";
+            Chart.defaults.color = '#556b5c';
+            Chart.defaults.borderColor = '#e2ede5';
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             fetchHistoryData();
         });
+
+        // Safely destroy existing chart instances
+        function destroyCharts() {
+            if (chartDiseases) {
+                chartDiseases.destroy();
+                chartDiseases = null;
+            }
+            if (chartTrend) {
+                chartTrend.destroy();
+                chartTrend = null;
+            }
+            if (chartSeverity) {
+                chartSeverity.destroy();
+                chartSeverity = null;
+            }
+            if (chartCrops) {
+                chartCrops.destroy();
+                chartCrops = null;
+            }
+        }
+
+        // Render the 4 dashboard charts
+        function renderDashboardCharts(scans) {
+            destroyCharts();
+
+            const chartsSection = document.getElementById('dashboard-charts-section');
+            if (!scans || scans.length === 0) {
+                if (chartsSection) chartsSection.style.display = 'none';
+                return;
+            }
+            if (chartsSection) chartsSection.style.display = 'block';
+
+            // 1. Bar Chart: Top 5 Diseases (use disease_name_en when present)
+            const diseaseCounts = {};
+            scans.forEach(s => {
+                const name = (s.disease_name_en && s.disease_name_en.trim())
+                    ? s.disease_name_en.trim()
+                    : (s.disease_name || 'Healthy').trim();
+                diseaseCounts[name] = (diseaseCounts[name] || 0) + 1;
+            });
+
+            const sortedDiseases = Object.entries(diseaseCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+
+            const diseaseLabels = sortedDiseases.map(d => d[0]);
+            const diseaseData = sortedDiseases.map(d => d[1]);
+
+            const ctxDiseases = document.getElementById('chart-diseases');
+            if (ctxDiseases) {
+                chartDiseases = new Chart(ctxDiseases, {
+                    type: 'bar',
+                    data: {
+                        labels: diseaseLabels,
+                        datasets: [{
+                            label: 'Scans',
+                            data: diseaseData,
+                            backgroundColor: ['#2e7d32', '#43a047', '#66bb6a', '#81c784', '#a5d6a7'],
+                            borderRadius: 6,
+                            maxBarThickness: 45
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: '#1c281e',
+                                padding: 10,
+                                cornerRadius: 6
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { stepSize: 1, precision: 0 }
+                            },
+                            x: {
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 2. Line Chart: Scans per Week
+            const weekMap = new Map();
+            scans.forEach(s => {
+                if (s.created_at) {
+                    const d = new Date(s.created_at);
+                    if (!isNaN(d.getTime())) {
+                        const day = d.getDay();
+                        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday start
+                        const monday = new Date(d);
+                        monday.setDate(diff);
+                        monday.setHours(0, 0, 0, 0);
+                        const time = monday.getTime();
+                        weekMap.set(time, (weekMap.get(time) || 0) + 1);
+                    }
+                }
+            });
+
+            let sortedWeeks = Array.from(weekMap.entries()).sort((a, b) => a[0] - b[0]);
+            if (sortedWeeks.length === 0) {
+                sortedWeeks = [[new Date().setHours(0, 0, 0, 0), scans.length]];
+            }
+
+            const weekLabels = sortedWeeks.map(w => {
+                const d = new Date(w[0]);
+                return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            });
+            const weekData = sortedWeeks.map(w => w[1]);
+
+            const ctxTrend = document.getElementById('chart-trend');
+            if (ctxTrend) {
+                chartTrend = new Chart(ctxTrend, {
+                    type: 'line',
+                    data: {
+                        labels: weekLabels,
+                        datasets: [{
+                            label: 'Scans',
+                            data: weekData,
+                            borderColor: '#2e7d32',
+                            backgroundColor: 'rgba(46, 125, 50, 0.12)',
+                            fill: true,
+                            tension: 0.35,
+                            borderWidth: 2.5,
+                            pointBackgroundColor: '#1b5e20',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: '#1c281e',
+                                padding: 10,
+                                cornerRadius: 6
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { stepSize: 1, precision: 0 }
+                            },
+                            x: {
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 3. Doughnut Chart: Severity Breakdown
+            let countMild = 0, countMod = 0, countSev = 0, countHealthy = 0;
+            scans.forEach(s => {
+                const sev = (s.severity || '').toLowerCase().trim();
+                if (sev === 'mild') countMild++;
+                else if (sev === 'moderate') countMod++;
+                else if (sev === 'severe') countSev++;
+                else countHealthy++;
+            });
+
+            const activeLang = getCurrentLanguage();
+            const sevLabels = [
+                tSeverity('mild', activeLang),
+                tSeverity('moderate', activeLang),
+                tSeverity('severe', activeLang),
+                tSeverity('healthy', activeLang)
+            ];
+
+            const ctxSeverity = document.getElementById('chart-severity');
+            if (ctxSeverity) {
+                chartSeverity = new Chart(ctxSeverity, {
+                    type: 'doughnut',
+                    data: {
+                        labels: sevLabels,
+                        datasets: [{
+                            data: [countMild, countMod, countSev, countHealthy],
+                            backgroundColor: ['#ffa726', '#f57c00', '#ef5350', '#43a047'],
+                            borderWidth: 2,
+                            borderColor: '#ffffff',
+                            hoverOffset: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '65%',
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    boxWidth: 12,
+                                    padding: 14,
+                                    usePointStyle: true
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: '#1c281e',
+                                padding: 10,
+                                cornerRadius: 6
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 4. Bar Chart: Scans per Crop
+            const cropCounts = {};
+            scans.forEach(s => {
+                const crop = (s.crop_name && s.crop_name.trim()) ? s.crop_name.trim() : 'Other';
+                cropCounts[crop] = (cropCounts[crop] || 0) + 1;
+            });
+
+            const sortedCrops = Object.entries(cropCounts).sort((a, b) => b[1] - a[1]);
+            const cropLabels = sortedCrops.map(c => c[0]);
+            const cropData = sortedCrops.map(c => c[1]);
+
+            const ctxCrops = document.getElementById('chart-crops');
+            if (ctxCrops) {
+                chartCrops = new Chart(ctxCrops, {
+                    type: 'bar',
+                    data: {
+                        labels: cropLabels,
+                        datasets: [{
+                            label: 'Scans',
+                            data: cropData,
+                            backgroundColor: '#1b5e20',
+                            borderRadius: 6,
+                            maxBarThickness: 45
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: '#1c281e',
+                                padding: 10,
+                                cornerRadius: 6
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { stepSize: 1, precision: 0 }
+                            },
+                            x: {
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+            }
+        }
 
         // Fetch scan history from the backend GET /history endpoint
         async function fetchHistoryData() {
@@ -270,6 +545,9 @@
                 if (!data || data.length === 0) {
                     // Populate empty metrics
                     populateMetrics(0, 'None', 'None');
+                    destroyCharts();
+                    const chartsSection = document.getElementById('dashboard-charts-section');
+                    if (chartsSection) chartsSection.style.display = 'none';
                     
                     // Toggle visibility
                     tableContainer.style.display = 'none';
@@ -278,6 +556,9 @@
                     // Process metrics
                     calculateAndPopulateMetrics(data);
                     
+                    // Render charts
+                    renderDashboardCharts(data);
+
                     // Render rows in table
                     renderHistoryTable(data);
                     
@@ -295,6 +576,10 @@
 
                 // Revert to empty defaults
                 populateMetrics(0, 'Error', 'Error');
+                destroyCharts();
+                const chartsSection = document.getElementById('dashboard-charts-section');
+                if (chartsSection) chartsSection.style.display = 'none';
+
                 tableContainer.style.display = 'none';
                 emptyState.style.display = 'flex';
             }
