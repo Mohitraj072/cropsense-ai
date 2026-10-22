@@ -8,6 +8,7 @@
     <!-- Stylesheet -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <!-- JavaScript -->
+    <script src="{{ url_for('static', filename='i18n.js') }}"></script>
     <script defer src="{{ url_for('static', filename='script.js') }}"></script>
 </head>
 <body>
@@ -31,14 +32,14 @@
 
             <nav>
                 <ul class="nav-menu" id="nav-menu">
-                    <li><a href="/" class="nav-link" id="nav-home">Home</a></li>
-                    <li><a href="/analyze" class="nav-link" id="nav-analyze">Analyze</a></li>
-                    <li><a href="/dashboard" class="nav-link active" id="nav-dashboard">Dashboard</a></li>
+                    <li><a href="/" class="nav-link" id="nav-home" data-i18n="nav_home">Home</a></li>
+                    <li><a href="/analyze" class="nav-link" id="nav-analyze" data-i18n="nav_analyze">Analyze</a></li>
+                    <li><a href="/dashboard" class="nav-link active" id="nav-dashboard" data-i18n="nav_dashboard">Dashboard</a></li>
                     {% if user_email %}
-                    <li><a href="/auth/logout" class="nav-link nav-auth" id="nav-logout">Logout</a></li>
+                    <li><a href="/auth/logout" class="nav-link nav-auth" id="nav-logout" data-i18n="nav_logout">Logout</a></li>
                     {% else %}
-                    <li><a href="/login" class="nav-link nav-auth" id="nav-login">Login</a></li>
-                    <li><a href="/signup" class="nav-link nav-auth nav-signup" id="nav-signup">Sign Up</a></li>
+                    <li><a href="/login" class="nav-link nav-auth" id="nav-login" data-i18n="nav_login">Login</a></li>
+                    <li><a href="/signup" class="nav-link nav-auth nav-signup" id="nav-signup" data-i18n="nav_signup">Sign Up</a></li>
                     {% endif %}
                 </ul>
             </nav>
@@ -60,15 +61,15 @@
             <!-- Dashboard Header -->
             <div class="dashboard-header">
                 <div class="dashboard-title">
-                    <h1>Your Scan History</h1>
-                    <p>All your previous crop disease analyses and health reports</p>
+                    <h1 data-i18n="dashboard_title">Your Scan History</h1>
+                    <p data-i18n="dashboard_subtitle">All your previous crop disease analyses and health reports</p>
                 </div>
                 <a href="/analyze" class="btn btn-primary" id="btn-new-analysis">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="12" y1="5" x2="12" y2="19"></line>
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                     </svg>
-                    <span>New Analysis</span>
+                    <span data-i18n="btn_new_analysis">New Analysis</span>
                 </a>
             </div>
 
@@ -85,7 +86,7 @@
                         </svg>
                     </div>
                     <div class="stat-info">
-                        <span class="stat-label">Total Scans</span>
+                        <span class="stat-label" data-i18n="stat_total_scans">Total Scans</span>
                         <span class="stat-value" id="val-total-scans">-</span>
                     </div>
                 </div>
@@ -100,7 +101,7 @@
                         </svg>
                     </div>
                     <div class="stat-info">
-                        <span class="stat-label">Common Disease</span>
+                        <span class="stat-label" data-i18n="stat_common_disease">Common Disease</span>
                         <span class="stat-value" id="val-common-disease">-</span>
                     </div>
                 </div>
@@ -116,7 +117,7 @@
                         </svg>
                     </div>
                     <div class="stat-info">
-                        <span class="stat-label">Last Scan Date</span>
+                        <span class="stat-label" data-i18n="stat_last_scan">Last Scan Date</span>
                         <span class="stat-value" id="val-last-scan">-</span>
                     </div>
                 </div>
@@ -127,11 +128,11 @@
                 <table class="history-table" id="history-table">
                     <thead>
                         <tr>
-                            <th>Date</th>
-                            <th>Crop Name</th>
-                            <th>Disease Name</th>
-                            <th>Severity</th>
-                            <th>Treatment</th>
+                            <th data-i18n="th_date">Date</th>
+                            <th data-i18n="th_crop">Crop Name</th>
+                            <th data-i18n="th_disease">Disease Name</th>
+                            <th data-i18n="th_severity">Severity</th>
+                            <th data-i18n="th_treatment">Treatment</th>
                         </tr>
                     </thead>
                     <tbody id="history-tbody">
@@ -148,9 +149,9 @@
                     <line x1="16" y1="13" x2="8" y2="13"></line>
                     <line x1="16" y1="17" x2="8" y2="17"></line>
                 </svg>
-                <h3>No scans yet</h3>
-                <p>Start by analyzing a crop to diagnose leaf diseases instantly with AI.</p>
-                <a href="/analyze" class="btn btn-primary" id="btn-empty-analyze">Analyze Now</a>
+                <h3 data-i18n="empty_title">No scans yet</h3>
+                <p data-i18n="empty_desc">Start by analyzing a crop to diagnose leaf diseases instantly with AI.</p>
+                <a href="/analyze" class="btn btn-primary" id="btn-empty-analyze" data-i18n="btn_analyze_now">Analyze Now</a>
             </div>
 
         </div>
@@ -239,7 +240,7 @@
             let maxCount = 0;
 
             data.forEach(item => {
-                const name = item.disease_name || 'Healthy';
+                const name = item.disease_name_en || item.disease_name || 'Healthy';
                 counts[name] = (counts[name] || 0) + 1;
             });
 
@@ -271,6 +272,8 @@
             const tbody = document.getElementById('history-tbody');
             tbody.innerHTML = ''; // Reset body content
 
+            const activeLang = getCurrentLanguage();
+
             scans.forEach(scan => {
                 const row = document.createElement('tr');
 
@@ -299,16 +302,16 @@
                 const severity = (scan.severity || 'N/A').toLowerCase().trim();
                 if (severity === 'mild') {
                     badge.classList.add('badge-mild');
-                    badge.textContent = 'Mild';
+                    badge.textContent = tSeverity('mild', activeLang);
                 } else if (severity === 'moderate') {
                     badge.classList.add('badge-moderate');
-                    badge.textContent = 'Moderate';
+                    badge.textContent = tSeverity('moderate', activeLang);
                 } else if (severity === 'severe') {
                     badge.classList.add('badge-severe');
-                    badge.textContent = 'Severe';
+                    badge.textContent = tSeverity('severe', activeLang);
                 } else {
                     badge.classList.add('badge-na');
-                    badge.textContent = scan.severity || 'N/A';
+                    badge.textContent = tSeverity('healthy', activeLang);
                 }
                 severityCell.appendChild(badge);
                 row.appendChild(severityCell);

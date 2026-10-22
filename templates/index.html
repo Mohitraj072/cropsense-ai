@@ -9,6 +9,7 @@
     <!-- Stylesheet -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <!-- JavaScript -->
+    <script src="{{ url_for('static', filename='i18n.js') }}"></script>
     <script defer src="{{ url_for('static', filename='script.js') }}"></script>
 </head>
 <body>
@@ -32,14 +33,14 @@
 
             <nav>
                 <ul class="nav-menu" id="nav-menu">
-                    <li><a href="/" class="nav-link active" id="nav-home">Home</a></li>
-                    <li><a href="/analyze" class="nav-link" id="nav-analyze">Analyze</a></li>
-                    <li><a href="/dashboard" class="nav-link" id="nav-dashboard">Dashboard</a></li>
+                    <li><a href="/" class="nav-link active" id="nav-home" data-i18n="nav_home">Home</a></li>
+                    <li><a href="/analyze" class="nav-link" id="nav-analyze" data-i18n="nav_analyze">Analyze</a></li>
+                    <li><a href="/dashboard" class="nav-link" id="nav-dashboard" data-i18n="nav_dashboard">Dashboard</a></li>
                     {% if user_email %}
-                    <li><a href="/auth/logout" class="nav-link nav-auth" id="nav-logout">Logout</a></li>
+                    <li><a href="/auth/logout" class="nav-link nav-auth" id="nav-logout" data-i18n="nav_logout">Logout</a></li>
                     {% else %}
-                    <li><a href="/login" class="nav-link nav-auth" id="nav-login">Login</a></li>
-                    <li><a href="/signup" class="nav-link nav-auth nav-signup" id="nav-signup">Sign Up</a></li>
+                    <li><a href="/login" class="nav-link nav-auth" id="nav-login" data-i18n="nav_login">Login</a></li>
+                    <li><a href="/signup" class="nav-link nav-auth nav-signup" id="nav-signup" data-i18n="nav_signup">Sign Up</a></li>
                     {% endif %}
                 </ul>
             </nav>

@@ -8,6 +8,7 @@
     <!-- Stylesheet -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <!-- JavaScript -->
+    <script src="{{ url_for('static', filename='i18n.js') }}"></script>
     <script defer src="{{ url_for('static', filename='script.js') }}"></script>
 </head>
 <body>
@@ -31,14 +32,14 @@
 
             <nav>
                 <ul class="nav-menu" id="nav-menu">
-                    <li><a href="/" class="nav-link" id="nav-home">Home</a></li>
-                    <li><a href="/analyze" class="nav-link active" id="nav-analyze">Analyze</a></li>
-                    <li><a href="/dashboard" class="nav-link" id="nav-dashboard">Dashboard</a></li>
+                    <li><a href="/" class="nav-link" id="nav-home" data-i18n="nav_home">Home</a></li>
+                    <li><a href="/analyze" class="nav-link active" id="nav-analyze" data-i18n="nav_analyze">Analyze</a></li>
+                    <li><a href="/dashboard" class="nav-link" id="nav-dashboard" data-i18n="nav_dashboard">Dashboard</a></li>
                     {% if user_email %}
-                    <li><a href="/auth/logout" class="nav-link nav-auth" id="nav-logout">Logout</a></li>
+                    <li><a href="/auth/logout" class="nav-link nav-auth" id="nav-logout" data-i18n="nav_logout">Logout</a></li>
                     {% else %}
-                    <li><a href="/login" class="nav-link nav-auth" id="nav-login">Login</a></li>
-                    <li><a href="/signup" class="nav-link nav-auth nav-signup" id="nav-signup">Sign Up</a></li>
+                    <li><a href="/login" class="nav-link nav-auth" id="nav-login" data-i18n="nav_login">Login</a></li>
+                    <li><a href="/signup" class="nav-link nav-auth nav-signup" id="nav-signup" data-i18n="nav_signup">Sign Up</a></li>
                     {% endif %}
                 </ul>
             </nav>
@@ -48,7 +49,22 @@
     <main class="result-wrapper">
         <div class="container">
             <div class="result-card">
-                <h1>Disease Analysis Report</h1>
+                <div class="result-header-row">
+                    <h1 data-i18n="report_title">Disease Analysis Report</h1>
+                    <div class="lang-selector-container">
+                        <label for="result-lang-select" class="lang-select-label" data-i18n="language_label">Language:</label>
+                        <select class="select-input select-lang" id="result-lang-select" data-i18n-lang-select onchange="handleResultLanguageChange(this.value)">
+                            <option value="en">English</option>
+                            <option value="hi">हिन्दी (Hindi)</option>
+                            <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                            <option value="ta">தமிழ் (Tamil)</option>
+                            <option value="te">తెలుగు (Telugu)</option>
+                            <option value="mr">मराठी (Marathi)</option>
+                            <option value="bn">বাংলা (Bengali)</option>
+                            <option value="ml">മലയാളം (Malayalam)</option>
+                        </select>
+                    </div>
+                </div>
                 
                 <div class="result-grid">
                     <!-- Left: Uploaded leaf image preview -->
@@ -60,19 +76,19 @@
                     <div class="result-details">
                         <!-- Crop Name -->
                         <div class="result-info-group">
-                            <span class="result-info-label">Crop Name</span>
+                            <span class="result-info-label" data-i18n="report_crop">Crop Name</span>
                             <span class="result-crop-name" id="report-crop-name">Loading...</span>
                         </div>
 
                         <!-- Disease Name -->
                         <div class="result-info-group">
-                            <span class="result-info-label">Disease Diagnosis</span>
+                            <span class="result-info-label" data-i18n="report_diagnosis">Disease Diagnosis</span>
                             <span class="result-disease-name" id="report-disease-name">Loading...</span>
                         </div>
 
                         <!-- Severity Badge -->
                         <div class="result-info-group">
-                            <span class="result-info-label">Severity Level</span>
+                            <span class="result-info-label" data-i18n="report_severity">Severity Level</span>
                             <div style="margin-top: 4px;">
                                 <span class="badge" id="report-severity-badge">Checking...</span>
                             </div>
@@ -80,13 +96,13 @@
 
                         <!-- Cause of the disease -->
                         <div class="result-info-group">
-                            <span class="result-info-label">Cause of Disease</span>
+                            <span class="result-info-label" data-i18n="report_cause">Cause of Disease</span>
                             <p class="result-info-value" id="report-cause">Loading...</p>
                         </div>
 
                         <!-- Treatment Recommendation -->
                         <div class="result-info-group">
-                            <span class="result-info-label">Recommended Treatment</span>
+                            <span class="result-info-label" data-i18n="report_treatment">Recommended Treatment</span>
                             <div class="treatment-box">
                                 <p id="report-treatment">Loading...</p>
                             </div>
@@ -102,7 +118,7 @@
                             <polyline points="1 20 1 14 7 14"></polyline>
                             <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                         </svg>
-                        <span>Analyze Another</span>
+                        <span data-i18n="btn_analyze_another">Analyze Another</span>
                     </a>
                     
                     <button class="btn btn-primary" id="btn-save" onclick="saveScanToDashboard()">
@@ -111,7 +127,7 @@
                             <polyline points="17 21 17 13 7 13 7 21"></polyline>
                             <polyline points="7 3 7 8 15 8"></polyline>
                         </svg>
-                        <span>Save to Dashboard</span>
+                        <span data-i18n="btn_save">Save to Dashboard</span>
                     </button>
                 </div>
 
@@ -121,7 +137,7 @@
                         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                         <polyline points="22 4 12 14.01 9 11.01"></polyline>
                     </svg>
-                    <span id="alert-text">Saved successfully!</span>
+                    <span id="alert-text" data-i18n="save_success">Saved successfully!</span>
                 </div>
             </div>
         </div>
@@ -159,6 +175,23 @@
 
             try {
                 scanData = JSON.parse(localData);
+                
+                const currentLang = scanData.language || getCurrentLanguage();
+                setLanguage(currentLang);
+                
+                const langDropdown = document.getElementById('result-lang-select');
+                if (langDropdown) {
+                    langDropdown.value = currentLang;
+                }
+
+                // Cache original language values
+                scanData.translations = scanData.translations || {};
+                scanData.translations[currentLang] = {
+                    disease_name: scanData.disease_name,
+                    cause: scanData.cause,
+                    treatment: scanData.treatment
+                };
+
                 renderScanDetails(scanData);
             } catch (e) {
                 console.error('Failed to parse scan data:', e);
@@ -179,27 +212,98 @@
 
             // Set text values
             document.getElementById('report-crop-name').textContent = data.crop_name || 'N/A';
-            document.getElementById('report-disease-name').textContent = data.disease_name || 'Healthy';
+            document.getElementById('report-disease-name').textContent = data.disease_name || t('severity_healthy');
             document.getElementById('report-cause').textContent = data.cause || 'No disease patterns detected.';
             document.getElementById('report-treatment').textContent = data.treatment || 'No treatment required.';
 
             // Render severity badge
             const badge = document.getElementById('report-severity-badge');
             const severity = (data.severity || 'N/A').toLowerCase().trim();
+            const activeLang = data.language || getCurrentLanguage();
 
             badge.className = 'badge'; // Reset classes
             if (severity === 'mild') {
                 badge.classList.add('badge-mild');
-                badge.textContent = 'Mild';
+                badge.textContent = tSeverity('mild', activeLang);
             } else if (severity === 'moderate') {
                 badge.classList.add('badge-moderate');
-                badge.textContent = 'Moderate';
+                badge.textContent = tSeverity('moderate', activeLang);
             } else if (severity === 'severe') {
                 badge.classList.add('badge-severe');
-                badge.textContent = 'Severe';
+                badge.textContent = tSeverity('severe', activeLang);
             } else {
                 badge.classList.add('badge-na');
-                badge.textContent = data.severity || 'Healthy / N/A';
+                badge.textContent = tSeverity('healthy', activeLang);
+            }
+        }
+
+        // Language change handler calling /translate
+        async function handleResultLanguageChange(newLang) {
+            if (!scanData) return;
+            if (scanData.language === newLang) return;
+
+            const langSelect = document.getElementById('result-lang-select');
+
+            // If we have cached translations for this language, use them directly
+            if (scanData.translations && scanData.translations[newLang]) {
+                const cached = scanData.translations[newLang];
+                scanData.disease_name = cached.disease_name;
+                scanData.cause = cached.cause;
+                scanData.treatment = cached.treatment;
+                scanData.language = newLang;
+                setLanguage(newLang);
+                localStorage.setItem('scanResult', JSON.stringify(scanData));
+                renderScanDetails(scanData);
+                return;
+            }
+
+            // Otherwise, fetch translation from backend /translate endpoint
+            langSelect.disabled = true;
+            const originalDisease = document.getElementById('report-disease-name').textContent;
+            document.getElementById('report-disease-name').textContent = 'Translating...';
+
+            try {
+                const response = await fetch('/translate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        language: newLang,
+                        fields: {
+                            disease_name: scanData.disease_name_en || scanData.disease_name,
+                            cause: scanData.cause,
+                            treatment: scanData.treatment
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || 'Server translation failed.');
+                }
+
+                const translated = await response.json();
+
+                scanData.translations = scanData.translations || {};
+                scanData.translations[newLang] = translated;
+
+                scanData.disease_name = translated.disease_name || scanData.disease_name;
+                scanData.cause = translated.cause || scanData.cause;
+                scanData.treatment = translated.treatment || scanData.treatment;
+                scanData.language = newLang;
+
+                setLanguage(newLang);
+                localStorage.setItem('scanResult', JSON.stringify(scanData));
+                renderScanDetails(scanData);
+
+            } catch (error) {
+                console.error('Translation error:', error);
+                alert(`Translation failed: ${error.message}`);
+                langSelect.value = scanData.language || 'en';
+                document.getElementById('report-disease-name').textContent = originalDisease;
+            } finally {
+                langSelect.disabled = false;
             }
         }
 
@@ -219,12 +323,18 @@
             btnSave.classList.add('btn-disabled');
 
             try {
+                const payload = {
+                    ...scanData,
+                    language: scanData.language || getCurrentLanguage(),
+                    disease_name_en: scanData.disease_name_en || scanData.disease_name
+                };
+
                 const response = await fetch('/save', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(scanData)
+                    body: JSON.stringify(payload)
                 });
 
                 const result = await response.json();
@@ -237,7 +347,7 @@
                 alertMsg.style.backgroundColor = 'rgba(46, 125, 50, 0.12)';
                 alertMsg.style.borderColor = 'rgba(46, 125, 50, 0.25)';
                 alertMsg.style.color = '#1b5e20';
-                alertText.textContent = 'Saved successfully!';
+                alertText.textContent = t('save_success');
                 
                 // Show success icon
                 alertMsg.querySelector('svg').innerHTML = `
@@ -247,7 +357,7 @@
                 alertMsg.classList.add('show');
                 
                 // Keep button disabled and change text
-                btnSave.querySelector('span').textContent = 'Saved to Dashboard';
+                btnSave.querySelector('span').textContent = t('btn_saved');
             } catch (error) {
                 console.error('Failed to save scan:', error);
                 
