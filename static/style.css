@@ -815,11 +815,12 @@ body {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
-    padding: 48px;
+    padding: 36px 40px;
     box-shadow: var(--shadow-lg);
-    max-width: 960px;
+    max-width: 1100px;
     margin: 0 auto;
     width: 100%;
+    box-sizing: border-box;
 }
 
 .result-card h1 {
@@ -873,27 +874,37 @@ body {
 
 .result-grid {
     display: grid;
-    grid-template-columns: 1.2fr 1.8fr;
-    gap: 48px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+    gap: 32px;
+    align-items: start;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.result-grid > * {
+    min-width: 0;
 }
 
 .result-image-container {
+    position: sticky;
+    top: 90px;
     border-radius: var(--radius-md);
     overflow: hidden;
     border: 1px solid var(--border-color);
     background-color: #0b110c;
-    height: 100%;
-    min-height: 320px;
-    max-height: 440px;
+    width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .result-image {
+    max-width: 100%;
     width: 100%;
-    height: 100%;
-    max-height: 440px;
+    height: auto;
+    max-height: 520px;
     object-fit: contain;
     display: block;
 }
@@ -902,12 +913,20 @@ body {
     display: flex;
     flex-direction: column;
     gap: 20px;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .result-info-group {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .result-info-label {
@@ -922,6 +941,7 @@ body {
     font-size: 1.2rem;
     font-weight: 600;
     color: var(--accent);
+    overflow-wrap: anywhere;
 }
 
 .result-disease-name {
@@ -929,6 +949,8 @@ body {
     font-weight: 800;
     color: var(--primary-dark);
     line-height: 1.2;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 /* Badges styling */
@@ -971,6 +993,8 @@ body {
     font-size: 1.05rem;
     color: var(--text-primary);
     line-height: 1.5;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .treatment-box {
@@ -979,6 +1003,8 @@ body {
     padding: 20px;
     border-radius: var(--radius-sm);
     margin-top: 4px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .treatment-box p {
@@ -986,13 +1012,21 @@ body {
     color: var(--primary-dark);
     font-weight: 500;
     line-height: 1.6;
+    overflow-wrap: anywhere;
 }
 
 /* Actions styling */
 .actions-row {
     display: flex;
-    gap: 16px;
-    margin-top: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 28px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.actions-row > * {
+    box-sizing: border-box;
 }
 
 .btn-secondary {
@@ -1042,6 +1076,8 @@ body {
     border: 1px solid rgba(46, 125, 50, 0.25);
     margin-top: 20px;
     font-weight: 600;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .alert-message.show {
@@ -1053,17 +1089,18 @@ body {
 @media (max-width: 900px) {
     .result-grid {
         grid-template-columns: 1fr;
-        gap: 32px;
+        gap: 24px;
     }
     
     .result-image-container {
-        max-height: 300px;
+        position: static;
+        max-height: 380px;
     }
 }
 
 @media (max-width: 768px) {
     .result-card {
-        padding: 32px 20px;
+        padding: 24px 18px;
     }
     
     .result-card h1 {
@@ -1073,8 +1110,10 @@ body {
     
     .actions-row {
         flex-direction: column;
+        gap: 10px;
     }
     
+    .actions-row > *,
     .btn, .btn-secondary {
         width: 100%;
         justify-content: center;
@@ -1771,14 +1810,19 @@ body {
 /* ── Treatment Tabs (Organic vs Chemical) ── */
 .treatment-tabs-wrapper {
     margin-top: 6px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .treatment-nav-tabs {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
     border-bottom: 2px solid var(--border-color);
     padding-bottom: 0;
     margin-bottom: 14px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .treatment-tab-btn {
@@ -1816,6 +1860,8 @@ body {
 .treatment-tab-pane {
     display: none;
     animation: fadeInDown 0.3s ease;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .treatment-tab-pane.active {
@@ -1829,6 +1875,8 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .treatment-options-list li {
@@ -1839,6 +1887,9 @@ body {
     border-radius: var(--radius-sm);
     font-size: 0.95rem;
     line-height: 1.5;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
 }
 
 .list-organic li {
@@ -1870,6 +1921,9 @@ body {
     color: #1b5e20;
     margin-top: 6px;
     animation: fadeInDown 0.3s ease;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
 }
 
 .treatment-healthy-box svg {
@@ -1897,6 +1951,8 @@ body {
     border-radius: var(--radius-sm);
     padding: 14px 18px;
     margin-top: 6px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .prevention-list {
@@ -1906,6 +1962,8 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .prevention-list li {
@@ -1915,6 +1973,9 @@ body {
     font-size: 0.93rem;
     color: var(--text-primary);
     line-height: 1.5;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
 }
 
 .prevention-list li svg {
@@ -1931,6 +1992,9 @@ body {
     padding: 16px 20px;
     margin-top: 20px;
     animation: fadeInDown 0.3s ease;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
 }
 
 .safety-card-header {
@@ -1966,12 +2030,15 @@ body {
     margin-bottom: 12px;
     line-height: 1.5;
     font-weight: 500;
+    overflow-wrap: anywhere;
 }
 
 .safety-guidelines-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
     gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .safety-guideline-item {
@@ -1996,6 +2063,8 @@ body {
 .weather-advice-section {
     margin-top: 20px;
     animation: fadeInDown 0.3s ease;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .weather-prompt-box {
@@ -2004,6 +2073,8 @@ body {
     border-radius: var(--radius-md);
     padding: 18px 20px;
     box-shadow: var(--shadow-sm);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .weather-prompt-header {
@@ -2045,6 +2116,8 @@ body {
     flex-wrap: wrap;
     align-items: center;
     gap: 12px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .btn-weather-primary {
@@ -2073,11 +2146,14 @@ body {
     align-items: center;
     gap: 6px;
     flex: 1;
-    min-width: 240px;
+    min-width: 220px;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .input-weather-city {
     flex: 1;
+    min-width: 120px;
     padding: 9px 12px;
     font-size: 0.86rem;
     border: 1px solid var(--border-color);
@@ -2117,6 +2193,8 @@ body {
     border-radius: var(--radius-sm);
     font-size: 0.84rem;
     line-height: 1.4;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .weather-status-msg.info {
@@ -2160,6 +2238,9 @@ body {
     padding: 18px 20px;
     box-shadow: var(--shadow-sm);
     animation: fadeInDown 0.3s ease;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
 }
 
 .weather-card-header {
@@ -2207,6 +2288,8 @@ body {
     grid-template-columns: repeat(4, 1fr);
     gap: 10px;
     margin-bottom: 16px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 @media (max-width: 640px) {
@@ -3112,8 +3195,11 @@ body {
     background: rgba(46, 125, 50, 0.06);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
-    padding: 10px 16px;
-    margin-top: 18px;
+    padding: 12px 18px;
+    margin-top: 16px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
 }
 
 .result-disclaimer-box svg {
