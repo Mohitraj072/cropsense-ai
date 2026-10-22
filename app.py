@@ -593,6 +593,7 @@ def save():
         chemical_options = parse_json_list(data.get("chemical_options"))
         prevention_tips = parse_json_list(data.get("prevention_tips"))
         safety_note = str(data.get("safety_note") or "").strip()
+        weather_advice = str(data.get("weather_advice") or "").strip()
 
         insert_data = {
             "user_id": session.get("user_id"),
@@ -609,16 +610,17 @@ def save():
             "chemical_options": chemical_options,
             "prevention_tips": prevention_tips,
             "safety_note": safety_note,
-            "follow_up_of": follow_up_of
+            "follow_up_of": follow_up_of,
+            "weather_advice": weather_advice
         }
         try:
             response = supabase.table("scans").insert(insert_data).execute()
         except Exception as insert_err:
             err_lower = str(insert_err).lower()
-            if any(col in err_lower for col in ["follow_up_of", "organic_options", "chemical_options", "prevention_tips", "safety_note"]):
+            if any(col in err_lower for col in ["weather_advice", "follow_up_of", "organic_options", "chemical_options", "prevention_tips", "safety_note"]):
                 legacy_data = {
                     k: v for k, v in insert_data.items()
-                    if k not in ["follow_up_of", "organic_options", "chemical_options", "prevention_tips", "safety_note"]
+                    if k not in ["weather_advice", "follow_up_of", "organic_options", "chemical_options", "prevention_tips", "safety_note"]
                 }
                 response = supabase.table("scans").insert(legacy_data).execute()
             else:
@@ -627,6 +629,115 @@ def save():
         return jsonify({"success": True, "data": response.data[0] if response.data else insert_data})
     except Exception as e:
         return jsonify({"error": "Failed to save scan: " + str(e)}), 500
+
+
+@app.route("/weather", methods=["GET"])
+@login_required
+def get_weather():
+    """
+    Fetch weather summary from Open-Meteo API using latitude and longitude.
+    Validates coordinate ranges and returns a compact weather summary.
+    """
+    raw_lat = request.args.get("lat")
+    raw_lon = request.args.get("lon")
+
+    if not raw_lat or not raw_lon:
+        return jsonify({"error": "Latitude ('lat') and longitude ('lon') are required."}), 400
+
+    try:
+        lat = float(raw_lat)
+        lon = float(raw_lon)
+    except (ValueError, TypeError):
+        return jsonify({"error": "Latitude and longitude must be valid numeric values."}), 400
+
+    if not (-90.0 <= lat <= 90.0):
+        return jsonify({"error": "Latitude must be between -90 and 90 degrees."}), 400
+    if not (-180.0 <= lon <= 180.0):
+        return jsonify({"error": "Longitude must be between -180 and 180 degrees."}), 400
+
+    forecast_url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "current": "temperature_2m,relative_humidity_2m,wind_speed_10m",
+        "daily": "precipitation_sum",
+        "forecast_days": 3,
+        "timezone": "auto"
+    }
+
+    try:
+        resp = requests.get(forecast_url, params=params, timeout=5)
+        if resp.status_code != 200:
+            return jsonify({"error": f"Open-Meteo returned status {resp.status_code}."}), 502
+        data = resp.json()
+    except requests.exceptions.Timeout:
+        return jsonify({"error": "Weather service timed out. Please try again."}), 504
+    except requests.exceptions.RequestException as req_err:
+        return jsonify({"error": f"Failed to connect to weather service: {str(req_err)}"}), 502
+
+    current = data.get("current", {})
+    daily = data.get("daily", {})
+
+    temp = current.get("temperature_2m")
+    humidity = current.get("relative_humidity_2m")
+    wind = current.get("wind_speed_10m")
+    rain_3d = daily.get("precipitation_sum", [])
+    if not isinstance(rain_3d, list):
+        rain_3d = []
+
+    return jsonify({
+        "success": True,
+        "latitude": lat,
+        "longitude": lon,
+        "temperature": temp,
+        "humidity": humidity,
+        "wind_speed": wind,
+        "rain_3d": rain_3d
+    })
+
+
+@app.route("/geocode", methods=["GET"])
+@login_required
+def geocode_city():
+    """
+    Search coordinates for a city using Open-Meteo Geocoding API.
+    Provides a fallback when browser geolocation is denied or unavailable.
+    """
+    city = request.args.get("city", "").strip()
+    if not city:
+        return jsonify({"error": "City name ('city') is required."}), 400
+
+    geocode_url = "https://geocoding-api.open-meteo.com/v1/search"
+    params = {
+        "name": city,
+        "count": 1,
+        "language": "en",
+        "format": "json"
+    }
+
+    try:
+        resp = requests.get(geocode_url, params=params, timeout=5)
+        if resp.status_code != 200:
+            return jsonify({"error": f"Geocoding service returned status {resp.status_code}."}), 502
+        data = resp.json()
+    except requests.exceptions.Timeout:
+        return jsonify({"error": "Geocoding service timed out. Please try again."}), 504
+    except requests.exceptions.RequestException as req_err:
+        return jsonify({"error": f"Failed to connect to geocoding service: {str(req_err)}"}), 502
+
+    results = data.get("results")
+    if not results or len(results) == 0:
+        return jsonify({"error": f"City '{city}' not found. Please verify the spelling or try another city."}), 404
+
+    top = results[0]
+    return jsonify({
+        "success": True,
+        "city": top.get("name", city),
+        "lat": top.get("latitude"),
+        "lon": top.get("longitude"),
+        "country": top.get("country", ""),
+        "admin1": top.get("admin1", "")
+    })
 
 
 @app.errorhandler(413)

@@ -50,3 +50,5 @@ alter table public.scans add column if not exists notes text;
 alter table public.scans add column if not exists follow_up_of bigint references public.scans(id) on delete set null;
 create policy "Allow anon updates" on public.scans for update to anon using (true) with check (true);
 
+-- Feature 7: Weather-aware advice
+alter table public.scans add column if not exists weather_advice text;
