@@ -119,7 +119,13 @@ const I18N_DICTIONARY = {
         severity_moderate: 'Moderate',
         severity_severe: 'Severe',
         severity_healthy: 'Healthy',
-        severity_na: 'Healthy / N/A'
+        severity_na: 'Healthy / N/A',
+        speech_listen: 'Listen',
+        speech_pause: 'Pause',
+        speech_resume: 'Resume',
+        speech_stop: 'Stop',
+        speech_no_voice: "This language's voice isn't installed on your device",
+        speech_listen_english: 'Listen in English'
     },
     hi: {
         nav_home: 'होम',
@@ -224,7 +230,13 @@ const I18N_DICTIONARY = {
         severity_moderate: 'मध्यम',
         severity_severe: 'गंभीर',
         severity_healthy: 'स्वस्थ',
-        severity_na: 'स्वस्थ / लागू नहीं'
+        severity_na: 'स्वस्थ / लागू नहीं',
+        speech_listen: 'सुनें',
+        speech_pause: 'रोकें',
+        speech_resume: 'जारी रखें',
+        speech_stop: 'बंद करें',
+        speech_no_voice: 'इस भाषा की आवाज़ आपके डिवाइस पर स्थापित नहीं है',
+        speech_listen_english: 'अंग्रेज़ी में सुनें'
     },
     kn: {
         nav_home: 'ಮುಖಪುಟ',
@@ -329,7 +341,13 @@ const I18N_DICTIONARY = {
         severity_moderate: 'ಮಧ್ಯಮ',
         severity_severe: 'ತೀವ್ರ',
         severity_healthy: 'ಆರೋಗ್ಯಕರ',
-        severity_na: 'ಆರೋಗ್ಯಕರ / ಅನ್ವಯಿಸುವುದಿಲ್ಲ'
+        severity_na: 'ಆರೋಗ್ಯಕರ / ಅನ್ವಯಿಸುವುದಿಲ್ಲ',
+        speech_listen: 'ಕೇಳಿ',
+        speech_pause: 'ವಿರಾಮ',
+        speech_resume: 'ಮುಂದುವರಿಸಿ',
+        speech_stop: 'ನಿಲ್ಲಿಸಿ',
+        speech_no_voice: 'ನಿಮ್ಮ ಸಾಧನದಲ್ಲಿ ಈ ಭಾಷೆಯ ಧ್ವನಿ ಸ್ಥಾಪಿಸಲಾಗಿಲ್ಲ',
+        speech_listen_english: 'ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ಕೇಳಿ'
     },
     ta: {
         nav_home: 'முகப்பு',
@@ -434,7 +452,13 @@ const I18N_DICTIONARY = {
         severity_moderate: 'நடுத்தர',
         severity_severe: 'தீவிர',
         severity_healthy: 'ஆரோக்கியமான',
-        severity_na: 'ஆரோக்கியமான / பொருந்தாது'
+        severity_na: 'ஆரோக்கியமான / பொருந்தாது',
+        speech_listen: 'கேளுங்கள்',
+        speech_pause: 'இடைநிறுத்து',
+        speech_resume: 'தொடரவும்',
+        speech_stop: 'நிறுத்து',
+        speech_no_voice: 'உங்கள் சாதனத்தில் இந்த மொழிக்கான குரல் நிறுவப்படவில்லை',
+        speech_listen_english: 'ஆங்கிலத்தில் கேளுங்கள்'
     },
     te: {
         nav_home: 'హోమ్',
@@ -539,7 +563,13 @@ const I18N_DICTIONARY = {
         severity_moderate: 'మధ్యస్థం',
         severity_severe: 'తీవ్రమైన',
         severity_healthy: 'ఆరోగ్యకరమైన',
-        severity_na: 'ఆరోగ్యకరమైన / వర్తించదు'
+        severity_na: 'ఆరోగ్యకరమైన / వర్తించదు',
+        speech_listen: 'వినండి',
+        speech_pause: 'పాజ్',
+        speech_resume: 'కొనసాగించండి',
+        speech_stop: 'ఆపండి',
+        speech_no_voice: 'మీ పరికరంలో ఈ భాష వాయిస్ ఇన్‌స్టాల్ చేయబడలేదు',
+        speech_listen_english: 'ఇంగ్లీషులో వినండి'
     },
     mr: {
         nav_home: 'मुख्यपृष्ठ',
@@ -644,7 +674,13 @@ const I18N_DICTIONARY = {
         severity_moderate: 'मध्यम',
         severity_severe: 'गंभीर',
         severity_healthy: 'निरोगी',
-        severity_na: 'निरोगी / लागू नाही'
+        severity_na: 'निरोगी / लागू नाही',
+        speech_listen: 'ऐका',
+        speech_pause: 'विराम',
+        speech_resume: 'पुन्हा सुरू करा',
+        speech_stop: 'थांबवा',
+        speech_no_voice: 'तुमच्या डिव्हाइसवर या भाषेचा आवाज इन्स्टॉल केलेला नाही',
+        speech_listen_english: 'इंग्रजीत ऐका'
     },
     bn: {
         nav_home: 'হোম',
@@ -749,7 +785,13 @@ const I18N_DICTIONARY = {
         severity_moderate: 'মাঝারি',
         severity_severe: 'মারাত্মক',
         severity_healthy: 'সুস্থ',
-        severity_na: 'সুস্থ / প্রযোজ্য নয়'
+        severity_na: 'সুস্থ / প্রযোজ্য নয়',
+        speech_listen: 'শুনুন',
+        speech_pause: 'থামান',
+        speech_resume: 'চালিয়ে যান',
+        speech_stop: 'বন্ধ করুন',
+        speech_no_voice: 'আপনার ডিভাইসে এই ভাষার ভয়েস ইনস্টল করা নেই',
+        speech_listen_english: 'ইংরেজিতে শুনুন'
     },
     ml: {
         nav_home: 'ഹോം',
@@ -854,7 +896,13 @@ const I18N_DICTIONARY = {
         severity_moderate: 'ഇടത്തരം',
         severity_severe: 'കഠിനമായ',
         severity_healthy: 'ആരോഗ്യകരമായ',
-        severity_na: 'ആരോഗ്യകരമായ / ബാധകമല്ല'
+        severity_na: 'ആരോഗ്യകരമായ / ബാധകമല്ല',
+        speech_listen: 'കേൾക്കുക',
+        speech_pause: 'താൽക്കാലികമായി നിർത്തുക',
+        speech_resume: 'തുടരുക',
+        speech_stop: 'നിർത്തുക',
+        speech_no_voice: 'നിങ്ങളുടെ ഉപകരണത്തിൽ ഈ ഭാഷയുടെ ശബ്ദം ഇൻസ്റ്റാൾ ചെയ്തിട്ടില്ല',
+        speech_listen_english: 'ഇംഗ്ലീഷിൽ കേൾക്കുക'
     }
 };
 

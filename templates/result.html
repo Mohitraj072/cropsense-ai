@@ -681,6 +681,9 @@
             if (typeof handleSpeechStop === 'function') {
                 handleSpeechStop();
             }
+            const fallbackBanner = document.getElementById('speech-fallback-banner');
+            if (fallbackBanner) fallbackBanner.style.display = 'none';
+
             if (!scanData) return;
             if (scanData.language === newLang) return;
 
@@ -1052,6 +1055,108 @@
         let isPaused = false;
         let currentVoice = null;
         let targetSpeechLocale = 'en-IN';
+        let cachedAvailableVoices = [];
+
+        // Language code to BCP 47 locale mapping
+        const LANG_LOCALE_MAP = {
+            en: 'en-IN',
+            hi: 'hi-IN',
+            kn: 'kn-IN',
+            ta: 'ta-IN',
+            te: 'te-IN',
+            mr: 'mr-IN',
+            bn: 'bn-IN',
+            ml: 'ml-IN'
+        };
+
+        // Voice search keywords for cross-browser voice name recognition
+        const LANG_KEYWORD_MAP = {
+            en: ['en-in', 'english', 'india', 'indian', 'en-us', 'en-gb'],
+            hi: ['hi-in', 'hindi', 'हिन्दी', 'devanagari'],
+            kn: ['kn-in', 'kannada', 'ಕನ್ನಡ'],
+            ta: ['ta-in', 'tamil', 'தமிழ்'],
+            te: ['te-in', 'telugu', 'తెలుగు'],
+            mr: ['mr-in', 'marathi', 'मराठी'],
+            bn: ['bn-in', 'bengali', 'bangla', 'বাংলা'],
+            ml: ['ml-in', 'malayalam', 'മലയാളം']
+        };
+
+        // Load voices and cache them
+        function loadAvailableVoices() {
+            if (!('speechSynthesis' in window)) return [];
+            const voices = window.speechSynthesis.getVoices() || [];
+            if (voices.length > 0) {
+                cachedAvailableVoices = voices;
+            }
+            return cachedAvailableVoices;
+        }
+
+        // Listen for voiceschanged event (voices load asynchronously in Chrome/Edge)
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = () => {
+                loadAvailableVoices();
+            };
+            loadAvailableVoices();
+        }
+
+        // Pick matching voice for the target language
+        function findVoiceForLanguage(langCode) {
+            const voices = (cachedAvailableVoices && cachedAvailableVoices.length > 0) ? cachedAvailableVoices : loadAvailableVoices();
+            if (!voices || voices.length === 0) return null;
+
+            const targetLocale = LANG_LOCALE_MAP[langCode] || `${langCode}-IN`;
+            const baseCode = (langCode || '').toLowerCase();
+            const keywords = LANG_KEYWORD_MAP[langCode] || [baseCode];
+
+            // Priority 1: Exact locale match (e.g. 'hi-IN')
+            let match = voices.find(v => {
+                const vLang = (v.lang || '').replace('_', '-').toLowerCase();
+                return vLang === targetLocale.toLowerCase();
+            });
+            if (match) return match;
+
+            // Priority 2: Prefix match on BCP 47 language code (e.g. 'hi' or 'hi-*')
+            match = voices.find(v => {
+                const vLang = (v.lang || '').replace('_', '-').toLowerCase();
+                return vLang === baseCode || vLang.startsWith(`${baseCode}-`);
+            });
+            if (match) return match;
+
+            // Priority 3: Keyword search in voice name or lang identifier
+            match = voices.find(v => {
+                const vName = (v.name || '').toLowerCase();
+                const vLang = (v.lang || '').toLowerCase();
+                return keywords.some(kw => vName.includes(kw) || vLang.includes(kw));
+            });
+            if (match) return match;
+
+            return null;
+        }
+
+        // Pick an English voice for fallback
+        function findEnglishVoice() {
+            const voices = (cachedAvailableVoices && cachedAvailableVoices.length > 0) ? cachedAvailableVoices : loadAvailableVoices();
+            if (!voices || voices.length === 0) return null;
+
+            // Try en-IN first, then en-US, en-GB, then any English voice
+            let match = voices.find(v => (v.lang || '').replace('_', '-').toLowerCase() === 'en-in');
+            if (match) return match;
+
+            match = voices.find(v => (v.lang || '').replace('_', '-').toLowerCase() === 'en-us');
+            if (match) return match;
+
+            match = voices.find(v => (v.lang || '').replace('_', '-').toLowerCase().startsWith('en-'));
+            if (match) return match;
+
+            match = voices.find(v => {
+                const vName = (v.name || '').toLowerCase();
+                const vLang = (v.lang || '').toLowerCase();
+                return vName.includes('english') || vLang.startsWith('en');
+            });
+            if (match) return match;
+
+            return voices[0] || null;
+        }
 
         // Build comprehensive speech narration from report fields
         function buildSpeechText(data, lang) {
@@ -1172,7 +1277,7 @@
             return chunks.filter(c => c && c.trim().length > 0);
         }
 
-        // Start playing the speech queue
+        // Start playing the speech queue with voice matching & fallback
         function handleSpeechPlay(forcedLang = null) {
             if (!('speechSynthesis' in window)) return;
             if (!scanData) return;
@@ -1181,6 +1286,41 @@
             handleSpeechStop();
 
             const activeLang = forcedLang || scanData.language || getCurrentLanguage();
+            const fallbackBanner = document.getElementById('speech-fallback-banner');
+
+            if (activeLang !== 'en') {
+                const matchedVoice = findVoiceForLanguage(activeLang);
+
+                if (!matchedVoice) {
+                    // No matching voice for this language is installed on the user's device
+                    if (fallbackBanner) {
+                        const fallbackText = document.getElementById('speech-fallback-text');
+                        if (fallbackText) {
+                            fallbackText.textContent = (typeof t === 'function' ? t('speech_no_voice', activeLang) : '') || "This language's voice isn't installed on your device.";
+                        }
+                        const fallbackBtn = document.getElementById('btn-fallback-en');
+                        if (fallbackBtn) {
+                            const btnSpan = fallbackBtn.querySelector('span');
+                            if (btnSpan) {
+                                btnSpan.textContent = (typeof t === 'function' ? t('speech_listen_english', activeLang) : '') || 'Listen in English';
+                            }
+                        }
+                        fallbackBanner.style.display = 'flex';
+                    }
+                    return; // Prompt English fallback instead of failing silently
+                } else {
+                    // Matching voice found
+                    if (fallbackBanner) fallbackBanner.style.display = 'none';
+                    currentVoice = matchedVoice;
+                    targetSpeechLocale = LANG_LOCALE_MAP[activeLang] || `${activeLang}-IN`;
+                }
+            } else {
+                // English requested
+                if (fallbackBanner) fallbackBanner.style.display = 'none';
+                currentVoice = findEnglishVoice();
+                targetSpeechLocale = 'en-IN';
+            }
+
             const paragraphs = buildSpeechText(scanData, activeLang);
             speechQueue = splitTextIntoChunks(paragraphs);
 
@@ -1191,6 +1331,49 @@
             isPaused = false;
 
             // Activate visible speaking UI
+            const btnListen = document.getElementById('btn-speech-listen');
+            const activeBar = document.getElementById('speech-active-bar');
+            if (btnListen) btnListen.style.display = 'none';
+            if (activeBar) activeBar.style.display = 'inline-flex';
+
+            updatePauseResumeState(false);
+            playNextQueueChunk();
+        }
+
+        // Play report narration in English when local Indic voice is unavailable
+        function handleSpeechPlayEnglish() {
+            const fallbackBanner = document.getElementById('speech-fallback-banner');
+            if (fallbackBanner) fallbackBanner.style.display = 'none';
+
+            let englishData = scanData;
+            if (scanData.translations && scanData.translations['en']) {
+                englishData = {
+                    ...scanData,
+                    ...scanData.translations['en'],
+                    language: 'en'
+                };
+            } else if (scanData.disease_name_en) {
+                englishData = {
+                    ...scanData,
+                    disease_name: scanData.disease_name_en,
+                    language: 'en'
+                };
+            }
+
+            handleSpeechStop();
+
+            currentVoice = findEnglishVoice();
+            targetSpeechLocale = 'en-IN';
+
+            const paragraphs = buildSpeechText(englishData, 'en');
+            speechQueue = splitTextIntoChunks(paragraphs);
+
+            if (speechQueue.length === 0) return;
+
+            speechQueueIndex = 0;
+            isSpeaking = true;
+            isPaused = false;
+
             const btnListen = document.getElementById('btn-speech-listen');
             const activeBar = document.getElementById('speech-active-bar');
             if (btnListen) btnListen.style.display = 'none';
