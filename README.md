@@ -3,7 +3,7 @@
 An AI-powered crop disease detection web app that helps farmers identify plant diseases instantly by uploading a photo of a crop leaf.
 
 ## 🚀 Live Demo
-[Coming soon / add your Vercel link here]
+[Live Demo](https://cropsense-ai-theta.vercel.app)
 
 ## 🧠 How It Works
 1. User uploads a photo of a crop leaf
