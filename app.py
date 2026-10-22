@@ -49,15 +49,34 @@ def login_required(f):
     return decorated
 
 
-def analyze_crop_image(image_bytes, mime_type):
+SUPPORTED_LANGUAGES = {
+    "en": "English",
+    "hi": "Hindi",
+    "kn": "Kannada",
+    "ta": "Tamil",
+    "te": "Telugu",
+    "mr": "Marathi",
+    "bn": "Bengali",
+    "ml": "Malayalam",
+}
+
+
+def analyze_crop_image(image_bytes, mime_type, language="en"):
+    lang_name = SUPPORTED_LANGUAGES.get(language, "English")
     prompt = (
-        "Analyze this crop leaf image and identify any disease present.\n\n"
-        "Return STRICTLY a JSON object with these exact keys:\n"
-        '{ "crop_name": "name of the crop (e.g. Tomato, Rice, Wheat)",\n'
-        '  "disease_name": "disease name or Healthy if none",\n'
+        f"Analyze this crop leaf image and identify any disease present.\n\n"
+        f"Provide the analysis in {lang_name} ({language}) for disease_name, cause, and treatment.\n"
+        f"Return STRICTLY a JSON object with these exact keys:\n"
+        '{\n'
+        '  "crop_name": "name of the crop (e.g. Tomato, Rice, Wheat)",\n'
+        f'  "disease_name": "disease name in {lang_name} or Healthy if none",\n'
+        '  "disease_name_en": "disease name in English or Healthy if none",\n'
         '  "severity": "mild | moderate | severe | N/A",\n'
-        '  "cause": "pathogen or N/A if healthy",\n'
-        '  "treatment": "recommended treatment or N/A if healthy" }\n\n'
+        f'  "cause": "pathogen/cause in {lang_name} or N/A if healthy",\n'
+        f'  "treatment": "recommended treatment in {lang_name} or N/A if healthy"\n'
+        '}\n\n'
+        'Note: "severity" MUST be one of: "mild", "moderate", "severe", "N/A" (exact English enum).\n'
+        '"disease_name_en" MUST be in English.\n'
         "Output ONLY raw JSON. No markdown, no code fences, no extra text."
     )
 
@@ -245,19 +264,27 @@ def detect():
         return jsonify({"error": "Only JPEG, PNG, and WebP images are supported."}), 400
     if not OPENROUTER_API_KEY:
         return jsonify({"error": "OpenRouter API not configured on server. Set OPENROUTER_API_KEY in Vercel environment variables."}), 500
+
+    language = (request.form.get("language") or "en").strip().lower()
+    if language not in SUPPORTED_LANGUAGES:
+        language = "en"
+
     try:
         image_bytes = image_file.read()
         mime_type = image_file.content_type or "image/jpeg"
-        raw_text, used_model = analyze_crop_image(image_bytes, mime_type)
+        raw_text, used_model = analyze_crop_image(image_bytes, mime_type, language=language)
         print("Analysis complete using: " + used_model)
         try:
             analysis_result = parse_ai_json(raw_text)
         except json.JSONDecodeError as json_err:
             print("JSON error: " + str(json_err) + "\nRaw: " + raw_text)
             return jsonify({"error": "AI returned invalid JSON. Raw: " + raw_text[:300]}), 500
-        for key in ["crop_name", "disease_name", "severity", "cause", "treatment"]:
+        for key in ["crop_name", "disease_name", "disease_name_en", "severity", "cause", "treatment"]:
             if key not in analysis_result:
                 analysis_result[key] = "Unknown"
+        if analysis_result.get("disease_name_en") in [None, "", "Unknown"]:
+            analysis_result["disease_name_en"] = analysis_result.get("disease_name", "Unknown")
+
         file_ext = image_file.filename.rsplit(".", 1)[-1] if "." in image_file.filename else "jpg"
         unique_filename = "scan_" + uuid.uuid4().hex + "." + file_ext
         image_url = upload_image_to_supabase(image_bytes, unique_filename, mime_type)
@@ -265,6 +292,7 @@ def detect():
             enc = base64.b64encode(image_bytes).decode("utf-8")
             image_url = "data:" + mime_type + ";base64," + enc
         analysis_result["image_url"] = image_url
+        analysis_result["language"] = language
         return jsonify(analysis_result)
     except Exception as e:
         em = str(e)
@@ -276,6 +304,78 @@ def detect():
         elif "402" in em or "credits" in em.lower():
             return jsonify({"error": "OpenRouter account has no credits. Add credits at openrouter.ai."}), 503
         return jsonify({"error": "Analysis failed: " + em}), 500
+
+
+@app.route("/translate", methods=["POST"])
+@login_required
+def translate():
+    if not OPENROUTER_API_KEY:
+        return jsonify({"error": "OpenRouter API not configured on server. Set OPENROUTER_API_KEY in Vercel environment variables."}), 500
+
+    data = request.get_json() or {}
+    fields = data.get("fields") or {}
+    target_lang = (data.get("language") or "").strip().lower()
+
+    if target_lang not in SUPPORTED_LANGUAGES:
+        return jsonify({"error": f"Unsupported language '{target_lang}'."}), 400
+
+    if not isinstance(fields, dict):
+        return jsonify({"error": "Invalid 'fields' payload; must be a JSON object."}), 400
+
+    target_lang_name = SUPPORTED_LANGUAGES[target_lang]
+
+    prompt = (
+        f"Translate the following crop disease report fields into {target_lang_name} ({target_lang}).\n"
+        f"Return STRICTLY a JSON object with these exact keys:\n"
+        '{\n'
+        f'  "disease_name": "translated disease name in {target_lang_name} or Healthy if healthy",\n'
+        f'  "cause": "translated pathogen/cause in {target_lang_name} or N/A",\n'
+        f'  "treatment": "translated treatment in {target_lang_name} or N/A"\n'
+        '}\n\n'
+        f"Fields to translate:\n"
+        f"{json.dumps(fields, ensure_ascii=False)}\n\n"
+        "Output ONLY raw JSON. No markdown, no code fences, no extra text."
+    )
+
+    try:
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": OPENROUTER_MODEL,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ]
+            },
+            timeout=30
+        )
+
+        if response.status_code == 401:
+            return jsonify({"error": "Invalid OpenRouter API key."}), 503
+        elif response.status_code == 402:
+            return jsonify({"error": "OpenRouter account has no credits."}), 503
+        elif response.status_code == 429:
+            return jsonify({"error": "Rate limit exceeded. Please wait and try again."}), 429
+        elif response.status_code != 200:
+            return jsonify({"error": f"OpenRouter API error {response.status_code}: {response.text[:200]}"}), 502
+
+        raw = response.json()["choices"][0]["message"]["content"].strip()
+        translated = parse_ai_json(raw)
+
+        return jsonify({
+            "disease_name": translated.get("disease_name", fields.get("disease_name", "")),
+            "cause": translated.get("cause", fields.get("cause", "")),
+            "treatment": translated.get("treatment", fields.get("treatment", ""))
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": "Translation failed: " + str(e)}), 500
 
 
 @app.route("/history", methods=["GET"])
@@ -316,7 +416,9 @@ def save():
             "severity": data.get("severity"),
             "cause": data.get("cause", "N/A"),
             "treatment": data.get("treatment"),
-            "image_url": data.get("image_url", "")
+            "image_url": data.get("image_url", ""),
+            "language": data.get("language", "en"),
+            "disease_name_en": data.get("disease_name_en") or data.get("disease_name")
         }
         response = supabase.table("scans").insert(insert_data).execute()
         return jsonify({"success": True, "data": response.data[0] if response.data else insert_data})
