@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="CropSense.AI Disease Diagnostic & Health Report - Downloadable printable PDF report for crop analysis.">
+    <title>Report #{{ scan.id }} - {{ scan.crop_name or 'Crop' }} - CropSense.AI</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- JavaScript -->
+    <script src="{{ url_for('static', filename='i18n.js') }}"></script>
+    <script defer src="{{ url_for('static', filename='script.js') }}"></script>
+</head>
+<body class="report-page-body">
+
+    <!-- Top Action Toolbar (Hidden in Print) -->
+    <header class="report-toolbar print-hidden">
+        <div class="container report-toolbar-container">
+            <a href="/dashboard" class="btn-secondary" id="btn-back-dashboard">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                <span data-i18n="btn_back_dashboard">Back to Dashboard</span>
+            </a>
+
+            <div class="report-toolbar-actions">
+                <button type="button" class="btn btn-primary" id="btn-download-pdf" onclick="window.print()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span data-i18n="btn_download_pdf">Download PDF</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Printable One-Page Report Container -->
+    <main class="report-container">
+        <article class="report-sheet" id="printable-report">
+            
+            <!-- Report Document Header -->
+            <header class="report-doc-header">
+                <div class="report-brand">
+                    <div class="report-logo-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 3.58 1 9.2a7.07 7.07 0 0 1-7.6 8.8Z" />
+                            <path d="M19 2c-2.26 4.33-5.27 7.14-8 10" />
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="report-brand-name">CropSense.AI</div>
+                        <div class="report-brand-tagline">AI Plant Pathology & Advisory System</div>
+                    </div>
+                </div>
+
+                <div class="report-meta-box">
+                    <div class="report-meta-item">
+                        <span class="report-meta-label">Report ID:</span>
+                        <span class="report-meta-val">#{{ scan.id }}</span>
+                    </div>
+                    <div class="report-meta-item">
+                        <span class="report-meta-label">Date:</span>
+                        <span class="report-meta-val" id="report-date">{{ scan.created_at[:10] if scan.created_at else 'Recent' }}</span>
+                    </div>
+                    {% if user_email %}
+                    <div class="report-meta-item">
+                        <span class="report-meta-label">User:</span>
+                        <span class="report-meta-val">{{ user_email }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </header>
+
+            <div class="report-divider"></div>
+
+            <!-- Report Title Row -->
+            <div class="report-title-row">
+                <h1 class="report-heading">Crop Diagnostic & Health Report</h1>
+                <span class="badge report-badge-top 
+                    {% if scan.severity|lower == 'severe' %}badge-severe
+                    {% elif scan.severity|lower == 'moderate' %}badge-moderate
+                    {% elif scan.severity|lower == 'mild' %}badge-mild
+                    {% else %}badge-na{% endif %}">
+                    {{ scan.severity|capitalize if scan.severity else 'Healthy' }}
+                </span>
+            </div>
+
+            <!-- Main Diagnostic Summary Grid -->
+            <section class="report-summary-grid">
+                <!-- Left: Leaf Photo -->
+                <div class="report-image-col">
+                    <div class="report-image-frame">
+                        {% if scan.image_url %}
+                        <img src="{{ scan.image_url }}" alt="Analyzed Leaf Image" class="report-leaf-img" id="report-img" />
+                        {% else %}
+                        <div class="report-image-placeholder">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                <polyline points="21 15 16 10 5 21"></polyline>
+                            </svg>
+                            <span>No Image Recorded</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Right: Vital Metrics -->
+                <div class="report-metrics-col">
+                    <div class="report-metric-row">
+                        <div class="report-metric-item">
+                            <span class="report-field-label">Crop Name</span>
+                            <strong class="report-field-val">{{ scan.crop_name or 'N/A' }}</strong>
+                        </div>
+                        <div class="report-metric-item">
+                            <span class="report-field-label">Diagnosis</span>
+                            <strong class="report-field-val report-disease-highlight">
+                                {{ scan.disease_name or 'Healthy Plant' }}
+                                {% if scan.disease_name_en and scan.disease_name_en != scan.disease_name %}
+                                <span class="report-en-sub">({{ scan.disease_name_en }})</span>
+                                {% endif %}
+                            </strong>
+                        </div>
+                    </div>
+
+                    <div class="report-metric-row">
+                        <div class="report-metric-item">
+                            <span class="report-field-label">Severity Level</span>
+                            <span class="report-severity-text">{{ scan.severity|capitalize if scan.severity else 'Healthy / N/A' }}</span>
+                        </div>
+                        <div class="report-metric-item">
+                            <div class="report-conf-header">
+                                <span class="report-field-label">AI Confidence</span>
+                                <strong class="report-conf-score">{{ scan.confidence }}%</strong>
+                            </div>
+                            <div class="report-conf-bar-track">
+                                <div class="report-conf-bar-fill {% if scan.confidence >= 80 %}conf-high{% elif scan.confidence >= 60 %}conf-med{% else %}conf-low{% endif %}" style="width: {{ scan.confidence }}%;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cause of Disease -->
+                    <div class="report-info-block">
+                        <span class="report-field-label">Cause & Pathogen Description</span>
+                        <p class="report-body-text">{{ scan.cause or 'No active disease pathogen detected. Healthy crop foliage.' }}</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Treatment & Management Recommendations -->
+            <section class="report-section report-treatment-section">
+                <h2 class="report-section-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                    <span>Recommended Treatment Options</span>
+                </h2>
+
+                {% if scan.severity|lower in ['healthy', 'n/a', 'none'] and not scan.organic_options and not scan.chemical_options %}
+                <div class="report-healthy-box">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2.2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                    <div>
+                        <strong>No treatment needed</strong>
+                        <p>Plant displays healthy, vibrant foliage. Continue standard watering and nutrient management.</p>
+                    </div>
+                </div>
+                {% else %}
+                <div class="report-options-grid">
+                    <!-- Organic Options -->
+                    <div class="report-option-card">
+                        <div class="report-card-heading">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2.2">
+                                <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 3.58 1 9.2a7.07 7.07 0 0 1-7.6 8.8Z" />
+                                <path d="M19 2c-2.26 4.33-5.27 7.14-8 10" />
+                            </svg>
+                            <span>Organic & Biological Solutions</span>
+                        </div>
+                        <ul class="report-bullet-list">
+                            {% if scan.organic_options %}
+                                {% for opt in scan.organic_options %}
+                                <li>{{ opt }}</li>
+                                {% endfor %}
+                            {% elif scan.treatment %}
+                                <li>{{ scan.treatment }}</li>
+                            {% else %}
+                                <li>Natural neem oil spray or botanical biopesticide.</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+
+                    <!-- Chemical Options -->
+                    <div class="report-option-card">
+                        <div class="report-card-heading">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f57c00" stroke-width="2.2">
+                                <path d="M10 2v7.31M14 9.3V1.99M8.5 2h7M14 9.3a6.5 6.5 0 1 1-4 0"></path>
+                                <circle cx="12" cy="15" r="1"></circle>
+                            </svg>
+                            <span>Chemical Treatment (Active Ingredients)</span>
+                        </div>
+                        <ul class="report-bullet-list">
+                            {% if scan.chemical_options %}
+                                {% for chem in scan.chemical_options %}
+                                <li>{{ chem }}</li>
+                                {% endfor %}
+                            {% elif scan.treatment %}
+                                <li>Refer to product label active ingredients.</li>
+                            {% else %}
+                                <li>Consult local agronomist for registered fungicide/bactericide.</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+            </section>
+
+            <!-- Prevention & Safety Section -->
+            <section class="report-section report-prevention-section">
+                <div class="report-options-grid">
+                    <!-- Prevention Tips -->
+                    <div class="report-option-card">
+                        <div class="report-card-heading">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1b5e20" stroke-width="2.2">
+                                <polyline points="9 11 12 14 22 4"></polyline>
+                                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                            </svg>
+                            <span>Long-term Prevention Tips</span>
+                        </div>
+                        <ul class="report-bullet-list">
+                            {% if scan.prevention_tips %}
+                                {% for tip in scan.prevention_tips %}
+                                <li>{{ tip }}</li>
+                                {% endfor %}
+                            {% else %}
+                                <li>Practice 3-year crop rotation and avoid overhead sprinkling.</li>
+                                <li>Ensure adequate field spacing for continuous air circulation.</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+
+                    <!-- Safety Precautions Note -->
+                    <div class="report-option-card report-safety-box">
+                        <div class="report-card-heading">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c62828" stroke-width="2.2">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                            </svg>
+                            <span>Safety Precautions</span>
+                        </div>
+                        <p class="report-safety-note-text">
+                            {{ scan.safety_note or 'Always wear protective gear (gloves, mask), follow product label instructions carefully, keep chemicals away from children and water bodies, and consult your local Krishi Vigyan Kendra before spraying.' }}
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Report Document Footer & Mandatory Disclaimer -->
+            <footer class="report-doc-footer">
+                <div class="report-disclaimer-box">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    <span class="report-disclaimer-text" data-i18n="report_disclaimer">
+                        AI-generated guidance, consult a local agriculture expert before treatment.
+                    </span>
+                </div>
+                <div class="report-footer-sub">
+                    <span>Generated by CropSense.AI &bull; Smart Crop Diagnostic System</span>
+                    <span id="report-print-date"></span>
+                </div>
+            </footer>
+
+        </article>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const printDateEl = document.getElementById('report-print-date');
+            if (printDateEl) {
+                printDateEl.textContent = 'Printed: ' + new Date().toLocaleDateString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+            }
+        });
+    </script>
+</body>
+</html>

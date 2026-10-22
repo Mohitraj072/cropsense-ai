@@ -5,7 +5,7 @@ import base64
 import json
 import requests
 from functools import wraps
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, abort
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
@@ -466,6 +466,54 @@ def history():
         return jsonify(response.data)
     except Exception as e:
         return jsonify({"error": "Failed to retrieve history: " + str(e)}), 500
+
+
+@app.route("/report/<int:scan_id>", methods=["GET"])
+@login_required
+def report(scan_id):
+    if not supabase:
+        return jsonify({"error": "Supabase not configured."}), 500
+    user_id = session.get("user_id")
+    user_email = session.get("user_email")
+    try:
+        response = (
+            supabase.table("scans")
+            .select("*")
+            .eq("id", scan_id)
+            .eq("user_id", user_id)
+            .execute()
+        )
+        if not response.data or len(response.data) == 0:
+            abort(404)
+        scan = response.data[0]
+
+        def parse_to_list(val):
+            if isinstance(val, list):
+                return val
+            if isinstance(val, str) and val.strip():
+                try:
+                    parsed = json.loads(val)
+                    if isinstance(parsed, list):
+                        return parsed
+                except Exception:
+                    pass
+                return [val.strip()]
+            return []
+
+        scan["organic_options"] = parse_to_list(scan.get("organic_options"))
+        scan["chemical_options"] = parse_to_list(scan.get("chemical_options"))
+        scan["prevention_tips"] = parse_to_list(scan.get("prevention_tips"))
+
+        try:
+            scan["confidence"] = int(scan.get("confidence") or 75)
+        except (ValueError, TypeError):
+            scan["confidence"] = 75
+
+        return render_template("report.html", scan=scan, user_email=user_email)
+    except Exception as e:
+        if hasattr(e, "code") and e.code == 404:
+            raise e
+        return jsonify({"error": "Failed to retrieve report: " + str(e)}), 500
 
 
 @app.route("/save", methods=["POST"])
