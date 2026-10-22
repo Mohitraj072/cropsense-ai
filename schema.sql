@@ -29,3 +29,7 @@ create policy "Allow anon inserts" on public.scans
 
 create policy "Allow anon reads" on public.scans
   for select to anon using (true);
+
+-- Multilingual support: language code and English disease name
+alter table public.scans add column if not exists language text default 'en';
+alter table public.scans add column if not exists disease_name_en text;
