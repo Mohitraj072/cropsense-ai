@@ -1,4 +1,5 @@
 import os
+import traceback
 import uuid
 import base64
 import json
@@ -175,6 +176,7 @@ def auth_signup():
         session["user_email"] = user.email
         return jsonify({"success": True, "redirect": "/analyze"})
     except Exception as e:
+        traceback.print_exc()
         em = str(e)
         if "already registered" in em.lower():
             return jsonify({"error": "Email already registered. Please log in."}), 400
@@ -199,6 +201,7 @@ def auth_login():
         session["user_email"] = user.email
         return jsonify({"success": True, "redirect": "/analyze"})
     except Exception as e:
+        traceback.print_exc()
         em = str(e)
         if "invalid" in em.lower() or "credentials" in em.lower():
             return jsonify({"error": "Invalid email or password."}), 401
