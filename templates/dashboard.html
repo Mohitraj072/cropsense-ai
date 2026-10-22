@@ -74,6 +74,54 @@
                 </a>
             </div>
 
+            <!-- Dashboard Filters Bar -->
+            <div class="filters-bar" id="dashboard-filters-bar" style="display: none;">
+                <div class="filters-group">
+                    <!-- Crop Filter -->
+                    <div class="filter-item">
+                        <label for="filter-crop" class="filter-label">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 3.58 1 9.2a7.07 7.07 0 0 1-7.6 8.8Z" />
+                                <path d="M19 2c-2.26 4.33-5.27 7.14-8 10" />
+                            </svg>
+                            <span data-i18n="filter_crop">Crop:</span>
+                        </label>
+                        <select id="filter-crop" class="select-filter" aria-label="Filter by Crop">
+                            <option value="all" data-i18n="filter_all_crops">All Crops</option>
+                        </select>
+                    </div>
+
+                    <!-- Date Range Filter -->
+                    <div class="filter-item">
+                        <label for="filter-date-range" class="filter-label">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                            <span data-i18n="filter_date">Date Range:</span>
+                        </label>
+                        <select id="filter-date-range" class="select-filter" aria-label="Filter by Date Range">
+                            <option value="all" data-i18n="filter_all_time">All Time</option>
+                            <option value="30d" data-i18n="filter_30d">Last 30 Days</option>
+                            <option value="7d" data-i18n="filter_7d">Last 7 Days</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="filters-meta">
+                    <span class="filter-count-badge" id="filter-count-badge">0 scans</span>
+                    <button type="button" class="btn-filter-reset" id="btn-filter-reset" onclick="resetFilters()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="1 4 1 10 7 10"></polyline>
+                            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                        </svg>
+                        <span data-i18n="btn_reset_filters">Reset</span>
+                    </button>
+                </div>
+            </div>
+
             <!-- Stats Cards Row -->
             <div class="stats-grid">
                 <!-- Stat 1: Total Scans -->
@@ -219,8 +267,8 @@
                     <line x1="16" y1="13" x2="8" y2="13"></line>
                     <line x1="16" y1="17" x2="8" y2="17"></line>
                 </svg>
-                <h3 data-i18n="empty_title">No scans yet</h3>
-                <p data-i18n="empty_desc">Start by analyzing a crop to diagnose leaf diseases instantly with AI.</p>
+                <h3 id="empty-title" data-i18n="empty_title">No scans yet</h3>
+                <p id="empty-desc" data-i18n="empty_desc">Start by analyzing a crop to diagnose leaf diseases instantly with AI.</p>
                 <a href="/analyze" class="btn btn-primary" id="btn-empty-analyze" data-i18n="btn_analyze_now">Analyze Now</a>
             </div>
 
@@ -249,6 +297,7 @@
         let chartTrend = null;
         let chartSeverity = null;
         let chartCrops = null;
+        let allScans = [];
 
         // Apply CropSense green theme defaults to Chart.js
         if (typeof Chart !== 'undefined') {
@@ -258,6 +307,11 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            const cropFilter = document.getElementById('filter-crop');
+            const dateFilter = document.getElementById('filter-date-range');
+            if (cropFilter) cropFilter.addEventListener('change', applyFiltersAndRender);
+            if (dateFilter) dateFilter.addEventListener('change', applyFiltersAndRender);
+
             fetchHistoryData();
         });
 
@@ -530,6 +584,7 @@
             const emptyState = document.getElementById('empty-state');
             const errorBanner = document.getElementById('dashboard-error');
             const errorText = document.getElementById('error-message-text');
+            const filtersBar = document.getElementById('dashboard-filters-bar');
 
             try {
                 const response = await fetch('/history');
@@ -543,28 +598,21 @@
                 errorBanner.style.display = 'none';
 
                 if (!data || data.length === 0) {
-                    // Populate empty metrics
+                    allScans = [];
+                    if (filtersBar) filtersBar.style.display = 'none';
                     populateMetrics(0, 'None', 'None');
                     destroyCharts();
                     const chartsSection = document.getElementById('dashboard-charts-section');
                     if (chartsSection) chartsSection.style.display = 'none';
                     
-                    // Toggle visibility
+                    updateEmptyState(false);
                     tableContainer.style.display = 'none';
                     emptyState.style.display = 'flex';
                 } else {
-                    // Process metrics
-                    calculateAndPopulateMetrics(data);
-                    
-                    // Render charts
-                    renderDashboardCharts(data);
-
-                    // Render rows in table
-                    renderHistoryTable(data);
-                    
-                    // Toggle visibility
-                    emptyState.style.display = 'none';
-                    tableContainer.style.display = 'block';
+                    allScans = data;
+                    populateCropFilterOptions(allScans);
+                    if (filtersBar) filtersBar.style.display = 'flex';
+                    applyFiltersAndRender();
                 }
 
             } catch (error) {
@@ -574,14 +622,159 @@
                 errorText.textContent = `Database configuration error: ${error.message}`;
                 errorBanner.style.display = 'flex';
 
+                if (filtersBar) filtersBar.style.display = 'none';
+
                 // Revert to empty defaults
                 populateMetrics(0, 'Error', 'Error');
                 destroyCharts();
                 const chartsSection = document.getElementById('dashboard-charts-section');
                 if (chartsSection) chartsSection.style.display = 'none';
 
+                updateEmptyState(false);
                 tableContainer.style.display = 'none';
                 emptyState.style.display = 'flex';
+            }
+        }
+
+        // Populate crop filter dropdown with distinct crops found in scans
+        function populateCropFilterOptions(scans) {
+            const cropSelect = document.getElementById('filter-crop');
+            if (!cropSelect) return;
+
+            const selectedValue = cropSelect.value;
+            const cropsSet = new Set();
+            scans.forEach(s => {
+                if (s.crop_name && s.crop_name.trim()) {
+                    cropsSet.add(s.crop_name.trim());
+                }
+            });
+
+            const sortedCrops = Array.from(cropsSet).sort((a, b) => a.localeCompare(b));
+            const activeLang = getCurrentLanguage();
+            const allCropsLabel = (typeof I18N_DICTIONARY !== 'undefined' && I18N_DICTIONARY[activeLang]?.filter_all_crops) || 'All Crops';
+
+            let optionsHtml = `<option value="all" data-i18n="filter_all_crops">${escapeHtml(allCropsLabel)}</option>`;
+            sortedCrops.forEach(c => {
+                optionsHtml += `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`;
+            });
+            cropSelect.innerHTML = optionsHtml;
+
+            if (cropsSet.has(selectedValue)) {
+                cropSelect.value = selectedValue;
+            } else {
+                cropSelect.value = 'all';
+            }
+        }
+
+        // Filter and update stat cards, charts, and table
+        function applyFiltersAndRender() {
+            const cropSelect = document.getElementById('filter-crop');
+            const dateSelect = document.getElementById('filter-date-range');
+            const selectedCrop = cropSelect ? cropSelect.value : 'all';
+            const selectedRange = dateSelect ? dateSelect.value : 'all';
+
+            const now = Date.now();
+            let cutoffTime = null;
+            if (selectedRange === '7d') {
+                cutoffTime = now - (7 * 24 * 60 * 60 * 1000);
+            } else if (selectedRange === '30d') {
+                cutoffTime = now - (30 * 24 * 60 * 60 * 1000);
+            }
+
+            const filtered = allScans.filter(scan => {
+                if (selectedCrop !== 'all') {
+                    const crop = (scan.crop_name || '').trim();
+                    if (crop.toLowerCase() !== selectedCrop.toLowerCase()) {
+                        return false;
+                    }
+                }
+                if (cutoffTime !== null) {
+                    if (!scan.created_at) return false;
+                    const scanTime = new Date(scan.created_at).getTime();
+                    if (isNaN(scanTime) || scanTime < cutoffTime) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+            // Update scan count badge
+            const countBadge = document.getElementById('filter-count-badge');
+            if (countBadge) {
+                countBadge.textContent = `${filtered.length} / ${allScans.length} scans`;
+            }
+
+            const tableContainer = document.getElementById('table-container');
+            const emptyState = document.getElementById('empty-state');
+            const chartsSection = document.getElementById('dashboard-charts-section');
+
+            if (filtered.length === 0) {
+                populateMetrics(0, 'None', 'None');
+                destroyCharts();
+                if (chartsSection) chartsSection.style.display = 'none';
+                if (tableContainer) tableContainer.style.display = 'none';
+                
+                updateEmptyState(true);
+                if (emptyState) emptyState.style.display = 'flex';
+            } else {
+                if (emptyState) emptyState.style.display = 'none';
+                if (tableContainer) tableContainer.style.display = 'block';
+
+                calculateAndPopulateMetrics(filtered);
+                renderDashboardCharts(filtered);
+                renderHistoryTable(filtered);
+            }
+        }
+
+        // Reset crop & date filters
+        function resetFilters() {
+            const cropSelect = document.getElementById('filter-crop');
+            const dateSelect = document.getElementById('filter-date-range');
+            if (cropSelect) cropSelect.value = 'all';
+            if (dateSelect) dateSelect.value = 'all';
+            applyFiltersAndRender();
+        }
+
+        // Update empty state text and action depending on whether it was caused by filters
+        function updateEmptyState(isFilterEmpty) {
+            const emptyTitle = document.getElementById('empty-title');
+            const emptyDesc = document.getElementById('empty-desc');
+            const emptyBtn = document.getElementById('btn-empty-analyze');
+
+            if (isFilterEmpty) {
+                if (emptyTitle) {
+                    emptyTitle.removeAttribute('data-i18n');
+                    emptyTitle.textContent = 'No matching scans';
+                }
+                if (emptyDesc) {
+                    emptyDesc.removeAttribute('data-i18n');
+                    emptyDesc.textContent = 'No scans found matching the selected crop or date range filters.';
+                }
+                if (emptyBtn) {
+                    emptyBtn.removeAttribute('data-i18n');
+                    emptyBtn.textContent = 'Reset Filters';
+                    emptyBtn.href = '#';
+                    emptyBtn.onclick = (e) => {
+                        e.preventDefault();
+                        resetFilters();
+                    };
+                }
+            } else {
+                const activeLang = getCurrentLanguage();
+                if (emptyTitle) {
+                    emptyTitle.setAttribute('data-i18n', 'empty_title');
+                    emptyTitle.textContent = (typeof I18N_DICTIONARY !== 'undefined' && I18N_DICTIONARY[activeLang]?.empty_title) || 'No scans yet';
+                }
+                if (emptyDesc) {
+                    emptyDesc.setAttribute('data-i18n', 'empty_desc');
+                    emptyDesc.textContent = (typeof I18N_DICTIONARY !== 'undefined' && I18N_DICTIONARY[activeLang]?.empty_desc) || 'Start by analyzing a crop to diagnose leaf diseases instantly with AI.';
+                }
+                if (emptyBtn) {
+                    emptyBtn.setAttribute('data-i18n', 'btn_analyze_now');
+                    emptyBtn.textContent = (typeof I18N_DICTIONARY !== 'undefined' && I18N_DICTIONARY[activeLang]?.btn_analyze_now) || 'Analyze Now';
+                    emptyBtn.href = '/analyze';
+                    emptyBtn.onclick = null;
+                }
             }
         }
 
@@ -589,7 +782,12 @@
         function calculateAndPopulateMetrics(data) {
             const totalScans = data.length;
 
-            // Find most common disease (skipping "healthy" if others exist, otherwise top occurrence)
+            if (totalScans === 0) {
+                populateMetrics(0, 'None', 'None');
+                return;
+            }
+
+            // Find most common disease
             const counts = {};
             let maxDisease = 'None';
             let maxCount = 0;
@@ -606,12 +804,20 @@
                 }
             }
 
-            // Get last scan date (first element because sorted desc)
-            let lastScanDate = 'None';
-            if (data[0] && data[0].created_at) {
-                lastScanDate = formatDateString(data[0].created_at);
-            }
+            // Get last scan date (latest created_at in dataset)
+            let latestDate = null;
+            data.forEach(item => {
+                if (item.created_at) {
+                    const d = new Date(item.created_at);
+                    if (!isNaN(d.getTime())) {
+                        if (!latestDate || d > latestDate) {
+                            latestDate = d;
+                        }
+                    }
+                }
+            });
 
+            const lastScanDate = latestDate ? formatDateString(latestDate) : 'None';
             populateMetrics(totalScans, maxDisease, lastScanDate);
         }
 
@@ -706,6 +912,17 @@
                 return str;
             }
             return str.slice(0, num) + '...';
+        }
+
+        // Escape HTML helper
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
         }
     </script>
 
