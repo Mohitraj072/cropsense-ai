@@ -65,7 +65,7 @@ def analyze_crop_image(image_bytes, mime_type, language="en"):
     lang_name = SUPPORTED_LANGUAGES.get(language, "English")
     prompt = (
         f"Analyze this crop leaf image and identify any disease present.\n\n"
-        f"Provide the analysis in {lang_name} ({language}) for disease_name, cause, treatment, and retake_tip.\n"
+        f"Provide the analysis in {lang_name} ({language}) for disease_name, cause, treatment, organic_options, chemical_options, prevention_tips, safety_note, and retake_tip.\n"
         f"Return STRICTLY a JSON object with these exact keys:\n"
         '{\n'
         '  "crop_name": "name of the crop (e.g. Tomato, Rice, Wheat)",\n'
@@ -73,16 +73,24 @@ def analyze_crop_image(image_bytes, mime_type, language="en"):
         '  "disease_name_en": "disease name in English or Healthy if none",\n'
         '  "severity": "mild | moderate | severe | N/A",\n'
         f'  "cause": "pathogen/cause in {lang_name} or N/A if healthy",\n'
-        f'  "treatment": "recommended treatment in {lang_name} or N/A if healthy",\n'
+        f'  "treatment": "short combined treatment summary in {lang_name} or N/A if healthy",\n'
+        f'  "organic_options": ["2 to 4 short organic/biological treatment methods in {lang_name}, or empty list [] if healthy"],\n'
+        f'  "chemical_options": ["2 to 4 chemical options naming active ingredients or product classes (no brand names) in {lang_name}, or empty list [] if healthy"],\n'
+        f'  "prevention_tips": ["2 to 3 practical prevention tips in {lang_name}"],\n'
+        f'  "safety_note": "one sentence in {lang_name} regarding safety precautions (gloves, mask, label instructions, consulting local Krishi Vigyan Kendra)",\n'
         '  "confidence": integer 0-100 representing diagnostic confidence percentage,\n'
         '  "image_quality": "good | blurry | too_dark | not_a_leaf | multiple_leaves",\n'
         f'  "retake_tip": "one short sentence in {lang_name} with photography guidance if quality is not good or confidence is low, or advice to maintain crop health if good"\n'
         '}\n\n'
-        'Note: "severity" MUST be one of: "mild", "moderate", "severe", "N/A" (exact English enum).\n'
-        '"image_quality" MUST be one of: "good", "blurry", "too_dark", "not_a_leaf", "multiple_leaves" (exact English enum).\n'
-        '"confidence" MUST be an integer between 0 and 100.\n'
-        '"disease_name_en" MUST be in English.\n'
-        "Output ONLY raw JSON. No markdown, no code fences, no extra text."
+        'Important Instructions:\n'
+        '- Do not invent exact chemical doses. Advise following the product label and consulting the local Krishi Vigyan Kendra before spraying.\n'
+        '- "chemical_options" MUST name generic active ingredients or chemical classes (e.g., Mancozeb, Copper Oxychloride, Azoxystrobin, Chlorothalonil), NEVER proprietary brand names.\n'
+        '- If the plant is Healthy, "organic_options" and "chemical_options" MUST be empty lists [].\n'
+        '- "severity" MUST be one of: "mild", "moderate", "severe", "N/A" (exact English enum).\n'
+        '- "image_quality" MUST be one of: "good", "blurry", "too_dark", "not_a_leaf", "multiple_leaves" (exact English enum).\n'
+        '- "confidence" MUST be an integer between 0 and 100.\n'
+        '- "disease_name_en" MUST be in English.\n'
+        'Output ONLY raw JSON. No markdown, no code fences, no extra text.'
     )
 
     encoded_image = base64.b64encode(image_bytes).decode("utf-8")
@@ -290,6 +298,24 @@ def detect():
         if analysis_result.get("disease_name_en") in [None, "", "Unknown"]:
             analysis_result["disease_name_en"] = analysis_result.get("disease_name", "Unknown")
 
+        # Parse organic_options, chemical_options, prevention_tips (must be lists of strings)
+        def sanitize_string_list(val):
+            if isinstance(val, list):
+                return [str(item).strip() for item in val if str(item).strip()]
+            elif isinstance(val, str) and val.strip():
+                return [val.strip()]
+            return []
+
+        analysis_result["organic_options"] = sanitize_string_list(analysis_result.get("organic_options"))
+        analysis_result["chemical_options"] = sanitize_string_list(analysis_result.get("chemical_options"))
+        analysis_result["prevention_tips"] = sanitize_string_list(analysis_result.get("prevention_tips"))
+
+        # Parse safety_note
+        safety_note = str(analysis_result.get("safety_note") or "").strip()
+        if not safety_note:
+            safety_note = "Always wear protective gear (gloves, mask), follow product label instructions carefully, and consult your local Krishi Vigyan Kendra before spraying."
+        analysis_result["safety_note"] = safety_note
+
         # Parse and sanitize confidence (integer 0-100)
         raw_conf = analysis_result.get("confidence")
         try:
@@ -355,11 +381,16 @@ def translate():
 
     prompt = (
         f"Translate the following crop disease report fields into {target_lang_name} ({target_lang}).\n"
+        f"Preserve technical accuracy and chemical active ingredient names.\n"
         f"Return STRICTLY a JSON object with these exact keys:\n"
         '{\n'
         f'  "disease_name": "translated disease name in {target_lang_name} or Healthy if healthy",\n'
         f'  "cause": "translated pathogen/cause in {target_lang_name} or N/A",\n'
-        f'  "treatment": "translated treatment in {target_lang_name} or N/A",\n'
+        f'  "treatment": "translated treatment summary in {target_lang_name} or N/A",\n'
+        f'  "organic_options": ["translated organic treatment options in {target_lang_name}"],\n'
+        f'  "chemical_options": ["translated chemical treatment options in {target_lang_name}"],\n'
+        f'  "prevention_tips": ["translated prevention tips in {target_lang_name}"],\n'
+        f'  "safety_note": "translated safety note in {target_lang_name}",\n'
         f'  "retake_tip": "translated retake guidance in {target_lang_name} or empty string"\n'
         '}\n\n'
         f"Fields to translate:\n"
@@ -398,10 +429,19 @@ def translate():
         raw = response.json()["choices"][0]["message"]["content"].strip()
         translated = parse_ai_json(raw)
 
+        def sanitize_list(val, fallback):
+            if isinstance(val, list):
+                return [str(i).strip() for i in val if str(i).strip()]
+            return fallback if isinstance(fallback, list) else []
+
         return jsonify({
             "disease_name": translated.get("disease_name", fields.get("disease_name", "")),
             "cause": translated.get("cause", fields.get("cause", "")),
             "treatment": translated.get("treatment", fields.get("treatment", "")),
+            "organic_options": sanitize_list(translated.get("organic_options"), fields.get("organic_options", [])),
+            "chemical_options": sanitize_list(translated.get("chemical_options"), fields.get("chemical_options", [])),
+            "prevention_tips": sanitize_list(translated.get("prevention_tips"), fields.get("prevention_tips", [])),
+            "safety_note": translated.get("safety_note", fields.get("safety_note", "")),
             "retake_tip": translated.get("retake_tip", fields.get("retake_tip", ""))
         })
     except Exception as e:
@@ -446,6 +486,24 @@ def save():
         except (TypeError, ValueError):
             confidence = None
 
+        def parse_json_list(val):
+            if isinstance(val, list):
+                return val
+            if isinstance(val, str) and val.strip():
+                try:
+                    parsed = json.loads(val)
+                    if isinstance(parsed, list):
+                        return parsed
+                except Exception:
+                    pass
+                return [val.strip()]
+            return []
+
+        organic_options = parse_json_list(data.get("organic_options"))
+        chemical_options = parse_json_list(data.get("chemical_options"))
+        prevention_tips = parse_json_list(data.get("prevention_tips"))
+        safety_note = str(data.get("safety_note") or "").strip()
+
         insert_data = {
             "user_id": session.get("user_id"),
             "crop_name": data.get("crop_name"),
@@ -456,9 +514,21 @@ def save():
             "image_url": data.get("image_url", ""),
             "language": data.get("language", "en"),
             "disease_name_en": data.get("disease_name_en") or data.get("disease_name"),
-            "confidence": confidence
+            "confidence": confidence,
+            "organic_options": organic_options,
+            "chemical_options": chemical_options,
+            "prevention_tips": prevention_tips,
+            "safety_note": safety_note
         }
-        response = supabase.table("scans").insert(insert_data).execute()
+        try:
+            response = supabase.table("scans").insert(insert_data).execute()
+        except Exception as insert_err:
+            if any(col in str(insert_err).lower() for col in ["organic_options", "chemical_options", "prevention_tips", "safety_note"]):
+                legacy_data = {k: v for k, v in insert_data.items() if k not in ["organic_options", "chemical_options", "prevention_tips", "safety_note"]}
+                response = supabase.table("scans").insert(legacy_data).execute()
+            else:
+                raise insert_err
+
         return jsonify({"success": True, "data": response.data[0] if response.data else insert_data})
     except Exception as e:
         return jsonify({"error": "Failed to save scan: " + str(e)}), 500
